@@ -308,7 +308,7 @@ components.html("""
 """, height=0)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR
+# SIDEBAR — secondary info only
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     col_logo, col_lang = st.columns([2, 1])
@@ -318,25 +318,6 @@ with st.sidebar:
         if st.button(T("lang_btn"), key="lang_toggle", use_container_width=True):
             st.session_state.lang = "en" if is_ar() else "ar"
             st.rerun()
-
-    st.markdown('<hr style="border-color:#00e5b420;margin:8px 0;">', unsafe_allow_html=True)
-
-    # Scan section
-    st.markdown(f'<div style="font-family:Orbitron,monospace;font-size:.7rem;color:#00e5b4;letter-spacing:.15em;margin-bottom:8px;">{T("scan_section")}</div>', unsafe_allow_html=True)
-
-    scan_mode = st.radio("Scan Mode", [T("mode_single"), T("mode_bulk")], horizontal=True, label_visibility="collapsed")
-    bulk_mode = (scan_mode == T("mode_bulk"))
-
-    if bulk_mode:
-        raw_bulk     = st.text_area(T("bulk_ph"), height=100, label_visibility="collapsed", placeholder=T("bulk_ph"))
-        targets_list = [x.strip() for x in raw_bulk.splitlines() if x.strip()]
-        single_target = ""
-    else:
-        single_target = st.text_input("Target", placeholder=T("target_ph"), label_visibility="collapsed", key="target_input")
-        targets_list  = []
-
-    use_cache = st.checkbox(T("cache_chk"), value=True)
-    run_btn   = st.button(T("scan_btn"), use_container_width=True, type="primary")
 
     st.markdown('<hr style="border-color:#00e5b420;margin:8px 0;">', unsafe_allow_html=True)
 
@@ -413,6 +394,48 @@ with st.sidebar:
         st.caption(T("no_bookmarks"))
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SCAN INPUT — always in main area
+# ─────────────────────────────────────────────────────────────────────────────
+if st.session_state.results is None:
+    # Centered standby layout
+    st.markdown("""
+    <div style="text-align:center;padding:40px 0 20px 0;">
+      <div style="font-family:Orbitron,monospace;font-size:2rem;font-weight:900;color:#00e5b4;
+           text-shadow:0 0 30px #00e5b4,0 0 60px #00e5b440;">TITAN OSINT</div>
+      <div style="font-family:Share Tech Mono,monospace;font-size:.8rem;color:#405060;
+           margin-top:10px;letter-spacing:.12em;">ENTER A TARGET TO BEGIN CYBER ANALYSIS</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    _, col_mid, _ = st.columns([1, 4, 1])
+    with col_mid:
+        scan_mode     = st.radio("Scan Mode", [T("mode_single"), T("mode_bulk")], horizontal=True, label_visibility="collapsed")
+        bulk_mode     = (scan_mode == T("mode_bulk"))
+        if bulk_mode:
+            raw_bulk      = st.text_area(T("bulk_ph"), height=120, placeholder=T("bulk_ph"), label_visibility="collapsed")
+            targets_list  = [x.strip() for x in raw_bulk.splitlines() if x.strip()]
+            single_target = ""
+        else:
+            single_target = st.text_input("Target", placeholder=T("target_ph"), label_visibility="collapsed", key="target_input")
+            targets_list  = []
+        use_cache = st.checkbox(T("cache_chk"), value=True)
+        run_btn   = st.button(T("scan_btn"), use_container_width=True, type="primary")
+else:
+    # Compact scan bar at top of results
+    with st.expander(T("scan_section"), expanded=False):
+        scan_mode     = st.radio("Scan Mode", [T("mode_single"), T("mode_bulk")], horizontal=True, label_visibility="collapsed", key="sm2")
+        bulk_mode     = (scan_mode == T("mode_bulk"))
+        if bulk_mode:
+            raw_bulk      = st.text_area(T("bulk_ph"), height=80, placeholder=T("bulk_ph"), label_visibility="collapsed", key="rb2")
+            targets_list  = [x.strip() for x in raw_bulk.splitlines() if x.strip()]
+            single_target = ""
+        else:
+            single_target = st.text_input("Target", placeholder=T("target_ph"), label_visibility="collapsed", key="target_input2")
+            targets_list  = []
+        use_cache = st.checkbox(T("cache_chk"), value=True, key="uc2")
+        run_btn   = st.button(T("scan_btn"), use_container_width=True, type="primary", key="rb_top")
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SCAN EXECUTION
 # ─────────────────────────────────────────────────────────────────────────────
 if run_btn:
@@ -445,7 +468,7 @@ if run_btn:
         if not target_in:
             st.warning("أدخل هدفاً" if is_ar() else "Enter a target")
         else:
-            ttype_in = classify(target_in)
+            ttype_in  = classify(target_in)
             cached_in = get_cached(target_in) if use_cache else None
             if cached_in:
                 st.toast(T("cache_hit"), icon="⚡")
@@ -476,33 +499,9 @@ if run_btn:
             st.session_state.ai_analysis  = ""
             st.session_state.chat_history = []
             st.session_state.scan_ts      = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.rerun()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STANDBY SCREEN
-# ─────────────────────────────────────────────────────────────────────────────
 if st.session_state.results is None:
-    components.html("""
-    <style>
-    #sb{text-align:center;padding:60px 20px;}
-    .sbt{font-family:Orbitron,monospace;font-size:2.5rem;font-weight:900;color:#00e5b4;
-         text-shadow:0 0 30px #00e5b4,0 0 60px #00e5b440;animation:flicker 4s infinite;}
-    .sbs{font-family:Share Tech Mono,monospace;font-size:.85rem;color:#405060;margin-top:16px;letter-spacing:.12em;}
-    .sbg{display:flex;gap:16px;justify-content:center;margin-top:40px;flex-wrap:wrap;}
-    .sbc{padding:8px 18px;border:1px solid #00e5b430;border-radius:6px;
-         font-family:Share Tech Mono,monospace;font-size:.72rem;color:#405060;letter-spacing:.1em;}
-    @keyframes flicker{0%,100%{opacity:1;}92%{opacity:1;}93%{opacity:.7;}95%{opacity:1;}97%{opacity:.8;}}
-    </style>
-    <div id="sb">
-      <div class="sbt">TITAN OSINT</div>
-      <div class="sbs">ENTER A TARGET TO BEGIN CYBER ANALYSIS</div>
-      <div class="sbg">
-        <div class="sbc">IP ADDRESS</div><div class="sbc">DOMAIN</div>
-        <div class="sbc">EMAIL</div><div class="sbc">HASH MD5/SHA</div>
-        <div class="sbc">ASN</div><div class="sbc">URL</div>
-        <div class="sbc">GITHUB USER</div><div class="sbc">npm PACKAGE</div>
-      </div>
-    </div>
-    """, height=280)
     st.stop()
 
 # ─────────────────────────────────────────────────────────────────────────────
