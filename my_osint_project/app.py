@@ -85,6 +85,13 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
 }
 [data-testid="stSidebar"] * { color: #a0c0d0 !important; }
 
+/* Hide sidebar collapse button */
+[data-testid="collapsedControl"],
+button[kind="header"][aria-label="Close sidebar"],
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
+
 [data-testid="stMainBlockContainer"] { padding-top: 0.5rem !important; }
 section[data-testid="stMain"] { background: transparent !important; }
 
