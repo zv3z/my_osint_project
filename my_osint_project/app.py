@@ -85,9 +85,7 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
 }
 [data-testid="stSidebar"] * { color: #a0c0d0 !important; }
 
-/* Hide sidebar collapse button */
-[data-testid="collapsedControl"],
-button[kind="header"][aria-label="Close sidebar"],
+/* Hide only the close button inside sidebar, keep the open button */
 [data-testid="stSidebarCollapseButton"] {
     display: none !important;
 }
