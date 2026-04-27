@@ -288,6 +288,25 @@ window.addEventListener('resize',()=>{rsz();cols=Math.floor(c.width/fs);dr=Array
 </script>
 """, height=95)
 
+# Force sidebar always open via JS
+components.html("""
+<script>
+(function(){
+    function tryOpen(){
+        try{
+            var p=window.parent.document;
+            var sb=p.querySelector('section[data-testid="stSidebar"]');
+            if(sb && sb.getAttribute('aria-expanded')==='false'){
+                var btn=p.querySelector('[data-testid="collapsedControl"] button');
+                if(btn) btn.click();
+            }
+        }catch(e){}
+    }
+    setInterval(tryOpen, 800);
+})();
+</script>
+""", height=0)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
