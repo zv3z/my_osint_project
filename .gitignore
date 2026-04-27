@@ -1,0 +1,41 @@
+# Environment & secrets
+.env
+.streamlit/secrets.toml
+my_osint_project/.env
+my_osint_project/.streamlit/secrets.toml
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+titan_env/
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Misc
+=1.0.0
+.DS_Store
+.amazonq/
