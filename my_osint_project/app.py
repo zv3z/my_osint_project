@@ -219,6 +219,27 @@ hr { border-color: #00e5b415 !important; }
 .stCheckbox label span, .stRadio label span { color: #a0c0d0 !important; }
 #MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
 </style>
+<script>
+(function keepSidebarOpen() {
+    function openSidebar() {
+        const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+        if (btn) btn.click();
+    }
+    const observer = new MutationObserver(function() {
+        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+        if (sidebar && sidebar.getAttribute('aria-expanded') === 'false') {
+            openSidebar();
+        }
+    });
+    setTimeout(function() {
+        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+        if (sidebar) {
+            if (sidebar.getAttribute('aria-expanded') === 'false') openSidebar();
+            observer.observe(sidebar, { attributes: true, attributeFilter: ['aria-expanded'] });
+        }
+    }, 1000);
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
