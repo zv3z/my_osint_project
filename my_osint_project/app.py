@@ -12,9 +12,8 @@ from titan.config       import CONF, AI_AVAILABLE, ACTIVE_ENGINES
 from titan.classifier   import classify, TYPE_COLORS
 from titan.lang         import T
 from titan.db           import (save_scan, get_history, get_cached, set_cache,
-                                add_bookmark, get_bookmarks, delete_bookmark,
-                                add_note, get_notes, stats)
-from titan.engines      import run_all, ENGINE_CATEGORIES
+                                add_bookmark, add_note, get_notes, stats)
+from titan.engines      import run_all
 from titan.scoring      import compute_score
 from titan.ioc          import extract as extract_iocs, to_csv as iocs_to_csv
 from titan.ai_engine    import analyze as ai_analyze, chat as ai_chat, extract_mitre
@@ -26,7 +25,7 @@ st.set_page_config(
     page_title="Titan OSINT",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -85,10 +84,10 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
 }
 [data-testid="stSidebar"] * { color: #a0c0d0 !important; }
 
-/* Hide only the X close button inside the sidebar */
-[data-testid="stSidebarCollapseButton"] { display: none !important; }
-/* Keep the > open button always visible */
-[data-testid="collapsedControl"] { display: flex !important; }
+/* Hide sidebar completely */
+[data-testid="stSidebar"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"] { display: none !important; }
 
 [data-testid="stMainBlockContainer"] { padding-top: 0.5rem !important; }
 section[data-testid="stMain"] { background: transparent !important; }
@@ -308,90 +307,33 @@ components.html("""
 """, height=0)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR — secondary info only
+# TOP BAR — lang toggle + status (no sidebar)
 # ─────────────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    col_logo, col_lang = st.columns([2, 1])
-    with col_logo:
-        st.markdown('<span style="font-family:Orbitron,monospace;color:#00e5b4;font-weight:900;font-size:1rem;letter-spacing:.15em;">⚡ TITAN</span>', unsafe_allow_html=True)
-    with col_lang:
-        if st.button(T("lang_btn"), key="lang_toggle", use_container_width=True):
-            st.session_state.lang = "en" if is_ar() else "ar"
-            st.rerun()
+tb1, tb2, tb3, tb4 = st.columns([1, 1, 1, 1])
+with tb1:
+    if st.button(T("lang_btn"), key="lang_toggle", use_container_width=True):
+        st.session_state.lang = "en" if is_ar() else "ar"
+        st.rerun()
+tb2.metric(T("apis_configured"), ACTIVE_ENGINES)
+tb3.metric(T("ai_engine"), "Gemini" if CONF["GEMINI_KEY"] else ("OpenAI" if CONF["OPENAI_KEY"] else "OFF"))
+with tb4:
+    history_quick = get_history(limit=5)
+    if history_quick:
+        hist_labels = [f"{(r[2] or '')[:20]} [{r[3] or ''}]" for r in history_quick]
+        hist_sel = st.selectbox(T("history_section"), ["—"] + hist_labels, label_visibility="collapsed")
+        if hist_sel != "—":
+            idx = hist_labels.index(hist_sel)
+            tgt_h = history_quick[idx][2]
+            cached_h = get_cached(tgt_h)
+            if cached_h:
+                st.session_state.results  = json.loads(cached_h[2])
+                st.session_state.target   = tgt_h
+                st.session_state.ttype    = history_quick[idx][3]
+                st.session_state.score    = compute_score(st.session_state.results)
+                st.session_state.ioc_data = extract_iocs(st.session_state.results, tgt_h)
+                st.rerun()
 
-    st.markdown('<hr style="border-color:#00e5b420;margin:8px 0;">', unsafe_allow_html=True)
-
-    # Status
-    st.markdown(f'<div style="font-family:Orbitron,monospace;font-size:.7rem;color:#00e5b4;letter-spacing:.15em;margin-bottom:8px;">{T("status_section")}</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    c1.metric(T("apis_configured"), ACTIVE_ENGINES)
-    c2.metric(T("ai_engine"), "Gemini" if CONF["GEMINI_KEY"] else ("OpenAI" if CONF["OPENAI_KEY"] else "OFF"))
-
-    st.markdown('<hr style="border-color:#00e5b420;margin:8px 0;">', unsafe_allow_html=True)
-
-    # Engines list — always visible
-    st.markdown(f'<div style="font-family:Orbitron,monospace;font-size:.7rem;color:#00e5b4;letter-spacing:.15em;margin-bottom:8px;">{T("engines_section")}</div>', unsafe_allow_html=True)
-
-    CAT_COLORS = {"THREAT":"#ff4444","NETWORK":"#4488ff","REPUTATION":"#ffaa00","IDENTITY":"#cc88ff","DEVELOPER":"#00cc88"}
-    CAT_ICONS  = {"THREAT":"🔴","NETWORK":"🔵","REPUTATION":"🟡","IDENTITY":"🟣","DEVELOPER":"🟢"}
-
-    for cat, engines in ENGINE_CATEGORIES.items():
-        col  = CAT_COLORS.get(cat, "#888")
-        icon = CAT_ICONS.get(cat, "⚪")
-        with st.expander(f"{icon} {cat} ({len(engines)})", expanded=False):
-            for eng in engines:
-                # Heuristic key detection
-                eng_key = eng.upper().replace(" ","_").replace(".","").replace("-","_")
-                has_key = any(
-                    CONF.get(k) for k in CONF
-                    if any(part in k for part in [eng_key[:5], eng_key.split("_")[0]])
-                )
-                dot_col = col if has_key else "#334455"
-                st.markdown(
-                    f'<div style="padding:3px 0;font-size:.78rem;font-family:Share Tech Mono,monospace;">'
-                    f'<span style="color:{dot_col};text-shadow:0 0 6px {dot_col};">●</span> {eng}</div>',
-                    unsafe_allow_html=True
-                )
-
-    st.markdown('<hr style="border-color:#00e5b420;margin:8px 0;">', unsafe_allow_html=True)
-
-    # History
-    st.markdown(f'<div style="font-family:Orbitron,monospace;font-size:.7rem;color:#00e5b4;letter-spacing:.15em;margin-bottom:8px;">{T("history_section")}</div>', unsafe_allow_html=True)
-    history = get_history(limit=8)
-    if history:
-        for row in history:
-            ts  = (row[1] or "")[:16]
-            tgt = (row[2] or "")[:22]
-            typ = row[3] or ""
-            if st.button(f"● {tgt}  [{typ}]", key=f"h_{row[0]}", use_container_width=True):
-                cached = get_cached(tgt)
-                if cached:
-                    st.session_state.results  = json.loads(cached[2])
-                    st.session_state.target   = tgt
-                    st.session_state.ttype    = typ
-                    st.session_state.score    = compute_score(st.session_state.results)
-                    st.session_state.ioc_data = extract_iocs(st.session_state.results, tgt)
-                    st.rerun()
-    else:
-        st.caption(T("no_history"))
-
-    st.markdown('<hr style="border-color:#00e5b420;margin:8px 0;">', unsafe_allow_html=True)
-
-    # Bookmarks
-    st.markdown(f'<div style="font-family:Orbitron,monospace;font-size:.7rem;color:#00e5b4;letter-spacing:.15em;margin-bottom:8px;">{T("bookmarks_section")}</div>', unsafe_allow_html=True)
-    bookmarks = get_bookmarks()
-    if bookmarks:
-        for bm in bookmarks:
-            bc1, bc2 = st.columns([4, 1])
-            with bc1:
-                if st.button(f"⭐ {bm[1][:18]}", key=f"bm_{bm[0]}", use_container_width=True):
-                    st.session_state["target_input"] = bm[1]
-            with bc2:
-                if st.button("✕", key=f"delbm_{bm[0]}"):
-                    delete_bookmark(bm[0])
-                    st.rerun()
-    else:
-        st.caption(T("no_bookmarks"))
+st.markdown('<hr style="border-color:#00e5b420;margin:4px 0 10px 0;">', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCAN INPUT — always in main area
