@@ -85,9 +85,19 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
 }
 [data-testid="stSidebar"] * { color: #a0c0d0 !important; }
 
-/* Hide only the close button inside sidebar, keep the open button */
-[data-testid="stSidebarCollapseButton"] {
+/* Force sidebar always visible, hide all toggle buttons */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"] {
     display: none !important;
+}
+[data-testid="stSidebar"] {
+    transform: translateX(0) !important;
+    min-width: 280px !important;
+    visibility: visible !important;
+}
+[data-testid="stSidebar"][aria-expanded="false"] {
+    margin-left: 0 !important;
+    transform: translateX(0) !important;
 }
 
 [data-testid="stMainBlockContainer"] { padding-top: 0.5rem !important; }
