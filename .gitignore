@@ -1,8 +1,8 @@
 # Environment & secrets
 .env
-.streamlit/secrets.toml
+.streamlit/
 my_osint_project/.env
-my_osint_project/.streamlit/secrets.toml
+my_osint_project/.streamlit/
 
 # Databases
 *.db
@@ -36,6 +36,4 @@ env/
 *.log
 
 # Misc
-=1.0.0
 .DS_Store
-.amazonq/
