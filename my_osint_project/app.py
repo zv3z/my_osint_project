@@ -218,27 +218,6 @@ hr { border-color: #00e5b415 !important; }
 .stCheckbox label span, .stRadio label span { color: #a0c0d0 !important; }
 #MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
 </style>
-<script>
-(function keepSidebarOpen() {
-    function openSidebar() {
-        const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-        if (btn) btn.click();
-    }
-    const observer = new MutationObserver(function() {
-        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-        if (sidebar && sidebar.getAttribute('aria-expanded') === 'false') {
-            openSidebar();
-        }
-    });
-    setTimeout(function() {
-        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-        if (sidebar) {
-            if (sidebar.getAttribute('aria-expanded') === 'false') openSidebar();
-            observer.observe(sidebar, { attributes: true, attributeFilter: ['aria-expanded'] });
-        }
-    }, 1000);
-})();
-</script>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -286,25 +265,6 @@ setInterval(draw,45);
 window.addEventListener('resize',()=>{rsz();cols=Math.floor(c.width/fs);dr=Array(cols).fill(1);});
 </script>
 """, height=95)
-
-# Force sidebar always open via JS
-components.html("""
-<script>
-(function(){
-    function tryOpen(){
-        try{
-            var p=window.parent.document;
-            var sb=p.querySelector('section[data-testid="stSidebar"]');
-            if(sb && sb.getAttribute('aria-expanded')==='false'){
-                var btn=p.querySelector('[data-testid="collapsedControl"] button');
-                if(btn) btn.click();
-            }
-        }catch(e){}
-    }
-    setInterval(tryOpen, 800);
-})();
-</script>
-""", height=0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TOP BAR — lang toggle + status (no sidebar)

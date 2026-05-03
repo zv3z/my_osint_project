@@ -1,6 +1,5 @@
 """Network Reconnaissance engines"""
 import requests, re
-from requests.auth import HTTPBasicAuth
 from titan.config import CONF
 
 def _shodan(target, ttype):
@@ -18,7 +17,9 @@ def _shodan(target, ttype):
 def _censys(target, ttype):
     try:
         key = CONF["CENSYS_KEY"]
-        auth = (key, "") if key else HTTPBasicAuth(CONF["CENSYS_ID"], CONF["CENSYS_SECRET"])
+        if not key:
+            return {"status": "no_key"}
+        auth = (key, "")
         r = requests.get(f"https://search.censys.io/api/v2/hosts/{target}", auth=auth, timeout=12)
         d = r.json().get("result", {})
         return {"services": [s.get("service_name") for s in d.get("services",[])],
