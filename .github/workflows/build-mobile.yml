@@ -1,0 +1,302 @@
+name: Build & Deploy Titan OSINT
+
+on:
+  push:
+    branches: [main, "claude/mobile-app-modern-ui-wpNFG"]
+    paths:
+      - "titan_flutter/**"
+      - ".github/workflows/build-mobile.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  # ── 1. Android APK ───────────────────────────────────────────────
+  build-android:
+    name: 🤖 Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: titan_flutter
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: titan_flutter
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: |
+          cp titan_flutter/build/app/outputs/apk/release/app-release.apk \
+             titan-osint-android.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: titan-osint-android.apk
+          retention-days: 90
+
+      - name: Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Titan OSINT — Latest Build"
+          body: |
+            ## ⚡ Titan OSINT — تحميل مباشر
+
+            ### 🤖 Android
+            1. حمّل ملف **titan-osint-android.apk**
+            2. فعّل "تثبيت من مصادر غير معروفة" في الإعدادات
+            3. افتح الملف وثبّته
+
+            ### 🌐 iOS & Android (PWA — بدون تثبيت)
+            افتح الرابط من المتصفح ثم "إضافة إلى الشاشة الرئيسية":
+            **https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/app/**
+
+            ### ⚙️ الإعداد
+            - شغّل الـ backend: `uvicorn api:app --host 0.0.0.0 --port 8000`
+            - في التطبيق: Settings → أدخل `http://[IP-جهازك]:8000`
+          files: titan-osint-android.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── 2. Flutter Web → GitHub Pages ───────────────────────────────
+  build-web:
+    name: 🌐 Web PWA → GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: titan_flutter
+        run: flutter pub get
+
+      - name: Build Flutter Web (PWA)
+        working-directory: titan_flutter
+        run: |
+          flutter build web \
+            --release \
+            --pwa-strategy=offline-first \
+            --base-href="/my_osint_project/app/"
+
+      - name: Prepare GitHub Pages output
+        run: |
+          mkdir -p gh-pages/app
+          cp -r titan_flutter/build/web/. gh-pages/app/
+          # Root redirect to /app/
+          cat > gh-pages/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Titan OSINT</title>
+            <style>
+              * { margin:0; padding:0; box-sizing:border-box; }
+              body {
+                background: #080b14;
+                display: flex; align-items: center; justify-content: center;
+                min-height: 100vh;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              }
+              .card {
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 20px;
+                padding: 40px;
+                text-align: center;
+                max-width: 380px;
+                width: 90%;
+              }
+              .icon {
+                width: 72px; height: 72px;
+                background: linear-gradient(135deg, #6366f1, #22d3ee);
+                border-radius: 18px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 2rem;
+                margin: 0 auto 16px;
+                box-shadow: 0 0 30px rgba(99,102,241,0.4);
+              }
+              h1 {
+                color: #f1f5f9;
+                font-size: 1.6rem;
+                font-weight: 800;
+                margin-bottom: 6px;
+              }
+              p { color: #64748b; font-size: 0.9rem; margin-bottom: 28px; }
+              .btn {
+                display: block;
+                background: linear-gradient(135deg, #6366f1, #4f46e5);
+                color: white;
+                text-decoration: none;
+                padding: 14px 28px;
+                border-radius: 12px;
+                font-weight: 700;
+                font-size: 1rem;
+                margin-bottom: 12px;
+                transition: transform 0.2s, box-shadow 0.2s;
+              }
+              .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(99,102,241,0.4);
+              }
+              .btn-apk {
+                background: rgba(16,185,129,0.15);
+                border: 1px solid rgba(16,185,129,0.3);
+                color: #10b981;
+              }
+              .badge {
+                display: inline-block;
+                background: rgba(99,102,241,0.12);
+                border: 1px solid rgba(99,102,241,0.25);
+                border-radius: 20px;
+                padding: 4px 12px;
+                font-size: 0.75rem;
+                color: #818cf8;
+                margin-top: 20px;
+              }
+            </style>
+            <script>
+              // Auto-redirect to app after 1.5s
+              setTimeout(() => { location.href = 'app/'; }, 1500);
+            </script>
+          </head>
+          <body>
+            <div class="card">
+              <div class="icon">⚡</div>
+              <h1>TITAN OSINT</h1>
+              <p>Cyber Intelligence Platform<br>33+ Engines · AI Fusion</p>
+              <a class="btn" href="app/">🚀 فتح التطبيق</a>
+              <a class="btn btn-apk"
+                 href="https://github.com/${{ github.repository }}/releases/latest/download/titan-osint-android.apk">
+                 📱 تحميل APK للأندرويد
+              </a>
+              <div class="badge">✅ مجاني · لا حساب مطلوب · يعمل بلا إنترنت</div>
+            </div>
+          </body>
+          </html>
+          HTML
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages
+
+  # ── 3. Deploy to GitHub Pages ───────────────────────────────────
+  deploy-pages:
+    name: 🚀 Deploy to GitHub Pages
+    needs: build-web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ── 4. iOS IPA ───────────────────────────────────────────────────
+  build-ios:
+    name: 🍎 iOS IPA
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: titan_flutter
+        run: flutter pub get
+
+      - name: Build iOS (no-codesign)
+        working-directory: titan_flutter
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        working-directory: titan_flutter
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/Release-iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa && zip -r ../titan-osint-ios.ipa Payload/
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: titan_flutter/build/ios/titan-osint-ios.ipa
+          retention-days: 90
+
+      - name: Add IPA to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: titan_flutter/build/ios/titan-osint-ios.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Summary ──────────────────────────────────────────────────────
+  summary:
+    name: 📋 Build Summary
+    needs: [build-android, build-web, deploy-pages]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Write summary
+        run: |
+          REPO="${{ github.repository }}"
+          OWNER="${{ github.repository_owner }}"
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # ⚡ Titan OSINT — Build Complete
+
+          ## 🌐 الرابط العام (iOS + Android PWA)
+          **https://${OWNER}.github.io/my_osint_project/**
+
+          ## 📱 تحميل مباشر
+          - **Android APK**: [تحميل](https://github.com/${REPO}/releases/latest/download/titan-osint-android.apk)
+          - **iOS IPA**: في Artifacts أدناه (ثبّت عبر AltStore)
+
+          ## 📲 كيف يثبّته المستخدمون
+
+          ### Android
+          1. افتح رابط APK → ثبّته مباشرة
+
+          ### iOS (بدون App Store)
+          1. افتح الرابط من **Safari**
+          2. اضغط زر المشاركة ↑
+          3. "إضافة إلى الشاشة الرئيسية"
+          4. يظهر كتطبيق أصلي ✅
+
+          ## ⚙️ تشغيل الـ Backend
+          \`\`\`bash
+          cd my_osint_project
+          pip install -r requirements.txt fastapi uvicorn
+          ./start_api.sh
+          \`\`\`
+          EOF
