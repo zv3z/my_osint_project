@@ -46,6 +46,15 @@ jobs:
           git checkout android/app/src/main/AndroidManifest.xml
           printf "flutter.sdk=%s\nsdk.dir=%s\n" "$FLUTTER_HOME" "$ANDROID_SDK_ROOT" \
             > android/local.properties
+          # Pin SDK versions explicitly so flutter.* vars don't cause issues
+          sed -i \
+            -e 's/compileSdk = flutter\.compileSdkVersion/compileSdk = 34/' \
+            -e 's/minSdk = flutter\.minSdkVersion/minSdk = 21/' \
+            -e 's/targetSdk = flutter\.targetSdkVersion/targetSdk = 34/' \
+            android/app/build.gradle.kts 2>/dev/null || true
+          # Disable R8 full mode — fixes resource linking failures in plugins
+          printf "\nandroid.enableR8.fullMode=false\n" >> android/gradle.properties
+          # Remove ndkVersion requirement
           find android -name "*.gradle.kts" -o -name "*.gradle" | \
             xargs sed -i '/ndkVersion/d' 2>/dev/null || true
 
