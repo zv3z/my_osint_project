@@ -68,8 +68,11 @@ def _haveibeenpwned(target, ttype):
     try:
         if ttype != "EMAIL":
             return {"status": "email_only"}
+        key = CONF.get("HIBP_KEY", "")
+        if not key:
+            return {"status": "no_key"}
         r = requests.get(f"https://haveibeenpwned.com/api/v3/breachedaccount/{target}",
-                         headers={"hibp-api-key": "free", "User-Agent": "TitanOSINT"}, timeout=12)
+                         headers={"hibp-api-key": key, "User-Agent": "TitanOSINT"}, timeout=12)
         if r.status_code == 404:
             return {"breached": False, "count": 0}
         if r.status_code == 200:
@@ -126,9 +129,12 @@ def _dehashed(target, ttype):
         if ttype not in ("EMAIL", "DOMAIN", "IP"):
             return {"status": "unsupported"}
         field = "email" if ttype == "EMAIL" else "ip_address" if ttype == "IP" else "email"
+        email = CONF.get("DEHASHED_EMAIL", "")
+        if not email:
+            return {"status": "no_key"}
         r = requests.get("https://api.dehashed.com/search",
                          params={"query": f'{field}:"{target}"', "size": 10},
-                         auth=(target, key), timeout=12)
+                         auth=(email, key), timeout=12)
         d = r.json()
         entries = d.get("entries", []) or []
         return {"total": d.get("total", 0),

@@ -69,7 +69,7 @@ def _numverify(target, ttype):
         if not key:
             return {"status": "no_key"}
         phone = re.sub(r"[^\d+]", "", target)
-        r = requests.get("http://apilayer.net/api/validate",
+        r = requests.get("https://apilayer.net/api/validate",
                          params={"access_key": key, "number": phone, "format": 1},
                          timeout=10)
         d = r.json()
