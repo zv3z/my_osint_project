@@ -31,6 +31,11 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Accept Android SDK licenses and install NDK
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;27.0.12077973" 2>/dev/null || true
+
       - name: Bootstrap missing platform files
         working-directory: titan_flutter
         run: |
