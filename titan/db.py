@@ -5,7 +5,7 @@ Column layout matches app.py expectations exactly:
   get_bookmarks→ (id, target, ttype, ts)
   get_notes    → (id, target, body, ts)
 """
-import sqlite3, hashlib
+import sqlite3, hashlib, html
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -58,7 +58,7 @@ def init():
 def save_scan(target: str, ttype: str, data_json: str,
               score: int = 0, level: str = "LOW") -> None:
     """Save a completed scan. data_json is the JSON-serialised engine results."""
-    summary = data_json[:200] if data_json else ""
+    summary = f"type={ttype} score={score} level={level}"
     with sqlite3.connect(DB_PATH) as c:
         c.execute(
             "INSERT INTO scans (target, ttype, score, level, summary) VALUES (?,?,?,?,?)",
@@ -80,7 +80,7 @@ def get_history(limit: int = 20) -> list[tuple]:
 
 def get_cached(target: str) -> tuple | None:
     """Return (hash, ts, data_json) if cache is fresh (<6h), else None."""
-    h = hashlib.md5(target.encode()).hexdigest()
+    h = hashlib.sha256(target.encode()).hexdigest()
     with sqlite3.connect(DB_PATH) as c:
         row = c.execute(
             "SELECT hash, ts, data_json FROM cache WHERE hash=?", (h,)
@@ -97,7 +97,7 @@ def get_cached(target: str) -> tuple | None:
 
 def set_cache(target: str, data_json: str) -> None:
     """Store pre-serialised JSON string in cache."""
-    h = hashlib.md5(target.encode()).hexdigest()
+    h = hashlib.sha256(target.encode()).hexdigest()
     with sqlite3.connect(DB_PATH) as c:
         c.execute(
             "INSERT OR REPLACE INTO cache (hash, ts, data_json) VALUES (?,?,?)",
@@ -130,9 +130,10 @@ def delete_bookmark(bm_id: int) -> None:
 # ── Notes ──────────────────────────────────────────────────────────────────
 
 def add_note(target: str, body: str) -> None:
+    safe_body = html.escape(body[:10_000])  # cap length and escape HTML entities
     with sqlite3.connect(DB_PATH) as c:
         c.execute(
-            "INSERT INTO notes (target, body) VALUES (?,?)", (target, body)
+            "INSERT INTO notes (target, body) VALUES (?,?)", (target, safe_body)
         )
 
 
