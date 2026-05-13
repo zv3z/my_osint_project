@@ -95,10 +95,62 @@ def _pypi(target, ttype):
     except Exception as e:
         return {"error": str(e)}
 
+def _builtwith(target, ttype):
+    try:
+        key = CONF.get("BUILTWITH_KEY", "")
+        if not key:
+            return {"status": "no_key"}
+        if ttype not in ("DOMAIN", "URL"):
+            return {"status": "unsupported"}
+        domain = target if ttype == "DOMAIN" else target.split("//")[-1].split("/")[0]
+        r = requests.get(f"https://api.builtwith.com/v21/api.json",
+                         params={"KEY": key, "LOOKUP": domain}, timeout=15)
+        d = r.json()
+        results = d.get("Results", [{}])[0].get("Result", {}) if d.get("Results") else {}
+        paths = results.get("Paths", [{}])[0] if results.get("Paths") else {}
+        techs = paths.get("Technologies", [])
+        cats = {}
+        for t in techs[:30]:
+            cat = t.get("Tag", "Other")
+            cats.setdefault(cat, []).append(t.get("Name",""))
+        return {"technology_count": len(techs),
+                "categories": {k: v[:5] for k, v in list(cats.items())[:10]}}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _subdomains(target, ttype):
+    try:
+        if ttype != "DOMAIN":
+            return {"status": "domain_only"}
+        subs = set()
+        # Source 1: HackerTarget
+        r1 = requests.get(f"https://api.hackertarget.com/hostsearch/?q={target}", timeout=12)
+        for line in r1.text.strip().splitlines():
+            if "," in line:
+                sub = line.split(",")[0].strip()
+                if sub.endswith(f".{target}") or sub == target:
+                    subs.add(sub)
+        # Source 2: crt.sh (reuse existing data)
+        r2 = requests.get(f"https://crt.sh/?q=%.{target}&output=json", timeout=15)
+        if r2.status_code == 200:
+            for cert in r2.json():
+                for name in cert.get("name_value", "").split("\n"):
+                    name = name.strip().lstrip("*.")
+                    if name.endswith(target) and name != target:
+                        subs.add(name)
+        sorted_subs = sorted(subs)[:40]
+        return {"subdomain_count": len(sorted_subs),
+                "subdomains": sorted_subs[:20],
+                "sources": ["HackerTarget", "CertSH"]}
+    except Exception as e:
+        return {"error": str(e)}
+
 DEV_ENGINES = {
-    "GitHub":    _github,
-    "CertSH":    _crtsh,
-    "Wayback":   _wayback,
-    "NPM":       _npm,
-    "PyPI":      _pypi,
+    "GitHub":     _github,
+    "CertSH":     _crtsh,
+    "Wayback":    _wayback,
+    "NPM":        _npm,
+    "PyPI":       _pypi,
+    "BuiltWith":  _builtwith,
+    "Subdomains": _subdomains,
 }

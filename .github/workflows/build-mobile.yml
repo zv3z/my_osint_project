@@ -196,7 +196,7 @@ jobs:
             <div class="card">
               <div class="icon">⚡</div>
               <h1>TITAN OSINT</h1>
-              <p>Cyber Intelligence Platform<br>33+ Engines · AI Fusion</p>
+              <p>Cyber Intelligence Platform<br>50+ Engines · AI Fusion</p>
               <a class="btn" href="app/">🚀 فتح التطبيق</a>
               <a class="btn btn-apk"
                  href="https://github.com/${{ github.repository }}/releases/latest/download/titan-osint-android.apk">

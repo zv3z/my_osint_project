@@ -138,6 +138,73 @@ def _sectrails(target, ttype):
     except Exception as e:
         return {"error": str(e)}
 
+def _hackertarget(target, ttype):
+    try:
+        results = {}
+        base = "https://api.hackertarget.com"
+        if ttype == "IP":
+            r = requests.get(f"{base}/reverseiplookup/?q={target}", timeout=10)
+            hosts = [h.strip() for h in r.text.strip().splitlines() if h.strip()][:15]
+            results["reverse_hosts"] = hosts
+            results["host_count"] = len(hosts)
+            r2 = requests.get(f"{base}/geoip/?q={target}", timeout=10)
+            for line in r2.text.strip().splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    results[k.strip().lower().replace(" ", "_")] = v.strip()
+        elif ttype == "DOMAIN":
+            r = requests.get(f"{base}/hostsearch/?q={target}", timeout=10)
+            lines = [l.strip() for l in r.text.strip().splitlines() if l.strip()][:20]
+            results["dns_records"] = lines
+            results["record_count"] = len(lines)
+        return results if results else {"status": "unsupported"}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _doh_dns(target, ttype):
+    try:
+        if ttype not in ("DOMAIN", "IP"):
+            return {"status": "unsupported"}
+        records = {}
+        headers = {"Accept": "application/dns-json"}
+        for rtype in (["A", "AAAA", "MX", "TXT", "NS"] if ttype == "DOMAIN" else ["PTR"]):
+            r = requests.get("https://dns.google/resolve",
+                             params={"name": target, "type": rtype},
+                             headers=headers, timeout=8)
+            d = r.json()
+            answers = [a.get("data", "") for a in d.get("Answer", [])]
+            if answers:
+                records[rtype] = answers[:5]
+        return {"dns_records": records, "record_types": list(records.keys())}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _rdap(target, ttype):
+    try:
+        if ttype == "DOMAIN":
+            r = requests.get(f"https://rdap.org/domain/{target}", timeout=12)
+        elif ttype == "IP":
+            r = requests.get(f"https://rdap.org/ip/{target}", timeout=12)
+        elif ttype == "ASN":
+            num = re.sub(r"[^0-9]", "", target)
+            r = requests.get(f"https://rdap.org/autnum/{num}", timeout=12)
+        else:
+            return {"status": "unsupported"}
+        if r.status_code != 200:
+            return {"status": f"http_{r.status_code}"}
+        d = r.json()
+        events = {e.get("eventAction", ""): e.get("eventDate", "")
+                  for e in d.get("events", [])
+                  if e.get("eventAction") in ("registration", "expiration", "last changed")}
+        entities = [e.get("handle","") for e in d.get("entities", [])[:3]]
+        return {"handle": d.get("handle", "N/A"),
+                "name": d.get("name", d.get("handle","N/A")),
+                "events": events,
+                "entities": entities,
+                "status": d.get("status", [])}
+    except Exception as e:
+        return {"error": str(e)}
+
 NETWORK_ENGINES = {
     "Shodan":         _shodan,
     "Censys":         _censys,
@@ -148,4 +215,7 @@ NETWORK_ENGINES = {
     "IPInfo":         _ipinfo,
     "Robtex":         _robtex,
     "SecurityTrails": _sectrails,
+    "HackerTarget":   _hackertarget,
+    "DNS Records":    _doh_dns,
+    "RDAP":           _rdap,
 }

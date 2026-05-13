@@ -209,8 +209,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 _InfoRow(label: 'App',     value: 'Titan OSINT'),
-                _InfoRow(label: 'Version', value: '3.1.0'),
-                _InfoRow(label: 'Engines', value: '33+ threat intelligence APIs'),
+                _InfoRow(label: 'Version', value: '3.2.0'),
+                _InfoRow(label: 'Engines', value: '50+ threat intelligence APIs'),
                 _InfoRow(label: 'AI',      value: 'Gemini 2.5 Flash + GPT-4o'),
                 _InfoRow(label: 'Platform', value: 'iOS & Android'),
               ],

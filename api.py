@@ -35,7 +35,7 @@ async def verify_key(key: str | None = Security(_api_key_header)):
 _raw_origins = os.environ.get("CORS_ORIGINS", "")
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()] or ["*"]
 
-app = FastAPI(title="Titan OSINT API", version="3.1.0")
+app = FastAPI(title="Titan OSINT API", version="3.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,7 +108,7 @@ class BookmarkRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"name": "Titan OSINT API", "version": "3.1.0", "status": "online",
+    return {"name": "Titan OSINT API", "version": "3.2.0", "status": "online",
             "active_engines": ACTIVE_ENGINES, "ai_available": AI_AVAILABLE}
 
 @app.post("/scan", dependencies=[Depends(verify_key)])

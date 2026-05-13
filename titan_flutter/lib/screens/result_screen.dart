@@ -602,17 +602,40 @@ class _SignalsTab extends StatelessWidget {
     if (otxP > 0) sigs.add(Signal(level: 'MEDIUM', engine: 'AlienVault OTX', message: '$otxP threat pulses'));
     if (hibp > 0) sigs.add(Signal(level: 'HIGH',  engine: 'HaveIBeenPwned', message: 'Found in $hibp breaches'));
 
-    final grey = (r['GreyNoise']  as Map?) ?? {};
-    final cip  = (r['CriminalIP'] as Map?) ?? {};
-    final ipqs = (r['IPQS']       as Map?) ?? {};
-    final lk   = (r['LeakCheck']  as Map?) ?? {};
+    final grey  = (r['GreyNoise']   as Map?) ?? {};
+    final cip   = (r['CriminalIP']  as Map?) ?? {};
+    final ipqs  = (r['IPQS']        as Map?) ?? {};
+    final lk    = (r['LeakCheck']   as Map?) ?? {};
+    final pt    = (r['PhishTank']   as Map?) ?? {};
+    final gsb   = (r['Google SafeBrowsing'] as Map?) ?? {};
+    final erep  = (r['EmailRep']    as Map?) ?? {};
+    final sfs   = (r['StopForumSpam'] as Map?) ?? {};
+    final spamh = (r['SpamHaus']    as Map?) ?? {};
+    final dh    = (r['Dehashed']    as Map?) ?? {};
+    final uname = (r['Username Search'] as Map?) ?? {};
+    final mb    = (r['MalwareBazaar'] as Map?) ?? {};
 
-    if (grey['noise'] == true)     sigs.add(Signal(level: 'MEDIUM', engine: 'GreyNoise',  message: 'Known internet scanner'));
-    if (cip['is_tor'] == true)     sigs.add(Signal(level: 'HIGH',   engine: 'CriminalIP', message: 'TOR exit node'));
-    if (cip['is_scanner'] == true) sigs.add(Signal(level: 'MEDIUM', engine: 'CriminalIP', message: 'Active scanner'));
-    if (ipqs['tor'] == true)       sigs.add(Signal(level: 'HIGH',   engine: 'IPQS',       message: 'TOR detected'));
+    if (grey['noise'] == true)     sigs.add(Signal(level: 'MEDIUM', engine: 'GreyNoise',   message: 'Known internet scanner'));
+    if (cip['is_tor'] == true)     sigs.add(Signal(level: 'HIGH',   engine: 'CriminalIP',  message: 'TOR exit node'));
+    if (cip['is_scanner'] == true) sigs.add(Signal(level: 'MEDIUM', engine: 'CriminalIP',  message: 'Active scanner'));
+    if (ipqs['tor'] == true)       sigs.add(Signal(level: 'HIGH',   engine: 'IPQS',        message: 'TOR detected'));
     if (lk['found'] == true || lk['result'] != null)
       sigs.add(Signal(level: 'HIGH', engine: 'LeakCheck', message: 'Credentials in leak DB'));
+
+    // New engine signals
+    if (pt['in_database'] == true) sigs.add(Signal(level: 'CRITICAL', engine: 'PhishTank', message: 'Known phishing URL in database'));
+    if (gsb['safe'] == false)      sigs.add(Signal(level: 'HIGH', engine: 'Google SafeBrowsing', message: 'Flagged: ${(gsb['threats'] as List?)?.join(', ') ?? 'unsafe'}'));
+    if (erep['suspicious'] == true) sigs.add(Signal(level: 'MEDIUM', engine: 'EmailRep', message: 'Suspicious email reputation'));
+    if (erep['malicious_activity'] == true) sigs.add(Signal(level: 'HIGH', engine: 'EmailRep', message: 'Malicious activity linked to email'));
+    if (erep['credentials_leaked'] == true) sigs.add(Signal(level: 'HIGH', engine: 'EmailRep', message: 'Credentials leaked'));
+    if (erep['data_breach'] == true) sigs.add(Signal(level: 'MEDIUM', engine: 'EmailRep', message: 'Found in data breach'));
+    if (sfs['appears'] == true) sigs.add(Signal(level: 'MEDIUM', engine: 'StopForumSpam', message: 'In spam database (${sfs['frequency'] ?? 0} reports)'));
+    if ((spamh['zone_count'] as int? ?? 0) > 0) sigs.add(Signal(level: 'HIGH', engine: 'SpamHaus', message: 'Blacklisted: ${(spamh['zones'] as List?)?.join(', ') ?? 'listed'}'));
+    final dhTotal = (dh['total'] as int?) ?? 0;
+    if (dhTotal > 0) sigs.add(Signal(level: 'HIGH', engine: 'Dehashed', message: '$dhTotal breach records found'));
+    if (mb['file_name'] != null) sigs.add(Signal(level: 'CRITICAL', engine: 'MalwareBazaar', message: 'Malware: ${mb['file_name']} (${mb['file_type'] ?? ''})'));
+    final foundOn = (uname['found_on'] as List?)?.length ?? 0;
+    if (foundOn > 0) sigs.add(Signal(level: 'LOW', engine: 'Username Search', message: 'Found on $foundOn platforms'));
 
     return sigs;
   }
