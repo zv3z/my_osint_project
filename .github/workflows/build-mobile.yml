@@ -31,16 +31,23 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Accept Android SDK licenses and install NDK
+      - name: Accept Android SDK licenses
         run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;27.0.12077973" 2>/dev/null || true
+          SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses 2>/dev/null || true
+            "$SDKMANAGER" "ndk;27.0.12077973" 2>/dev/null || true
+          fi
 
       - name: Bootstrap missing platform files
         working-directory: titan_flutter
         run: |
           flutter create --no-pub --project-name titan_osint --org com.titan .
           git checkout android/app/src/main/AndroidManifest.xml
+          printf "flutter.sdk=%s\nsdk.dir=%s\n" "$FLUTTER_HOME" "$ANDROID_SDK_ROOT" \
+            > android/local.properties
+          find android -name "*.gradle.kts" -o -name "*.gradle" | \
+            xargs sed -i '/ndkVersion/d' 2>/dev/null || true
 
       - name: Get dependencies
         working-directory: titan_flutter
