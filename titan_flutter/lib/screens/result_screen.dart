@@ -1,7 +1,13 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../main.dart';
 import '../models/scan_result.dart';
@@ -24,7 +30,7 @@ class _ResultScreenState extends State<ResultScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 5, vsync: this);
+    _tab = TabController(length: 7, vsync: this);
   }
 
   @override
@@ -45,6 +51,118 @@ class _ResultScreenState extends State<ResultScreen>
   Color get scoreColor =>
       _levelColor[r.score.label] ?? TitanTheme.indigoLight;
 
+  Future<void> _exportPdf() async {
+    final result = r;
+    final pdf = pw.Document();
+    final scoreHex = {
+      'CRITICAL': PdfColors.red,
+      'HIGH': PdfColors.orange,
+      'MEDIUM': PdfColors.amber,
+      'LOW': PdfColors.green,
+    }[result.score.label] ?? PdfColors.indigo;
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (ctx) => [
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('TITAN OSINT REPORT',
+                        style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(result.target,
+                        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Type: ${result.ttype} · ${result.fromCache ? "From cache" : "Live scan"}',
+                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                  ],
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: pw.BoxDecoration(
+                  color: scoreHex,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Column(children: [
+                  pw.Text('${result.score.score}',
+                      style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                  pw.Text(result.score.label,
+                      style: const pw.TextStyle(fontSize: 11, color: PdfColors.white)),
+                ]),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          pw.Divider(),
+          pw.SizedBox(height: 12),
+          pw.Text('ENGINE RESULTS',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300),
+            columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(1)},
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                children: [
+                  pw.Padding(padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Engine', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11))),
+                  pw.Padding(padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Status', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11))),
+                ],
+              ),
+              ...result.results.entries.map((e) {
+                final hasErr = (e.value as Map?)?.containsKey('error') ?? false;
+                return pw.TableRow(children: [
+                  pw.Padding(padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(e.key, style: const pw.TextStyle(fontSize: 10))),
+                  pw.Padding(padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(hasErr ? 'Error' : 'OK',
+                          style: pw.TextStyle(
+                              fontSize: 10,
+                              color: hasErr ? PdfColors.red : PdfColors.green,
+                              fontWeight: pw.FontWeight.bold))),
+                ]);
+              }),
+            ],
+          ),
+          if (result.iocData != null && result.iocData!.iocs.isNotEmpty) ...[
+            pw.SizedBox(height: 16),
+            pw.Text('IOC INDICATORS',
+                style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            ...result.iocData!.iocs.take(15).map((ioc) {
+              final m = ioc as Map;
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Row(children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: pw.BoxDecoration(color: PdfColors.indigo50,
+                        border: pw.Border.all(color: PdfColors.indigo200)),
+                    child: pw.Text('${m['type'] ?? ''}',
+                        style: const pw.TextStyle(fontSize: 9, color: PdfColors.indigo)),
+                  ),
+                  pw.SizedBox(width: 8),
+                  pw.Text('${m['value'] ?? ''}', style: const pw.TextStyle(fontSize: 10)),
+                ]),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+
+    final filename = 'titan-${result.target.replaceAll(RegExp(r'[^\w\-]'), '_')}.pdf';
+    await Printing.sharePdf(bytes: await pdf.save(), filename: filename);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,6 +177,11 @@ class _ResultScreenState extends State<ResultScreen>
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                tooltip: 'Export PDF',
+                onPressed: _exportPdf,
+              ),
               IconButton(
                 icon: const Icon(Icons.bookmark_outline),
                 tooltip: 'Bookmark',
@@ -91,6 +214,8 @@ class _ResultScreenState extends State<ResultScreen>
                 Tab(text: 'Dashboard'),
                 Tab(text: 'Signals'),
                 Tab(text: 'TitanAI'),
+                Tab(text: 'Map'),
+                Tab(text: 'Graph'),
                 Tab(text: 'Raw Data'),
                 Tab(text: 'Notes'),
               ],
@@ -103,6 +228,8 @@ class _ResultScreenState extends State<ResultScreen>
             _DashboardTab(result: r, scoreColor: scoreColor),
             _SignalsTab(result: r),
             AiTab(result: r),
+            _MapTab(result: r),
+            _GraphTab(result: r),
             _RawDataTab(result: r),
             _NotesTab(result: r),
           ],
@@ -841,4 +968,290 @@ class _NotesTabState extends State<_NotesTab> {
       ],
     );
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Map Tab
+// ══════════════════════════════════════════════════════════════════
+class _MapTab extends StatelessWidget {
+  final ScanResult result;
+  const _MapTab({required this.result});
+
+  List<Map<String, dynamic>> _extractGeoPoints() {
+    final points = <Map<String, dynamic>>[];
+    final res = result.results;
+
+    void tryAdd(Map? data, String source) {
+      if (data == null) return;
+      final lat = (data['lat'] as num?)?.toDouble();
+      final lon = (data['lon'] as num?)?.toDouble();
+      if (lat == null || lon == null || (lat == 0 && lon == 0)) return;
+      final city    = data['city']    as String? ?? '';
+      final country = data['country'] as String? ?? '';
+      points.add({'lat': lat, 'lon': lon,
+        'label': [city, country].where((s) => s.isNotEmpty).join(', '),
+        'source': source});
+    }
+
+    tryAdd(res['IPInfo'] as Map?, 'IPInfo');
+    tryAdd(res['Shodan']  as Map?, 'Shodan');
+    return points;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final points = _extractGeoPoints();
+
+    if (points.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.map_outlined, size: 56, color: TitanTheme.textMuted),
+            SizedBox(height: 12),
+            Text('No geo data available',
+                style: TextStyle(color: TitanTheme.textMuted, fontSize: 15)),
+            SizedBox(height: 8),
+            Text('Requires IPInfo or Shodan API key',
+                style: TextStyle(color: TitanTheme.textMuted, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    final first = points.first;
+    final center = LatLng(first['lat'] as double, first['lon'] as double);
+
+    return FlutterMap(
+      options: MapOptions(initialCenter: center, initialZoom: 4),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.titan.osint',
+        ),
+        MarkerLayer(
+          markers: points.map((p) {
+            final lat   = p['lat']   as double;
+            final lon   = p['lon']   as double;
+            final label = p['label'] as String;
+            return Marker(
+              point: LatLng(lat, lon),
+              width: 140,
+              height: 68,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: TitanTheme.indigo,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [BoxShadow(
+                          color: TitanTheme.indigo.withAlpha(102),
+                          blurRadius: 8)],
+                    ),
+                    child: Text(label.isEmpty ? '—' : label,
+                        style: const TextStyle(color: Colors.white, fontSize: 10,
+                            fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  const Icon(Icons.location_pin, color: Color(0xFFEF4444), size: 30),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Network Graph Tab
+// ══════════════════════════════════════════════════════════════════
+class _GraphNode {
+  final String label;
+  final Color  color;
+  const _GraphNode({required this.label, required this.color});
+}
+
+class _GraphTab extends StatelessWidget {
+  final ScanResult result;
+  const _GraphTab({required this.result});
+
+  static const _levelColor = {
+    'CRITICAL': Color(0xFFEF4444),
+    'HIGH':     Color(0xFFF97316),
+    'MEDIUM':   Color(0xFFF59E0B),
+    'LOW':      Color(0xFF10B981),
+  };
+
+  List<_GraphNode> _buildNodes() {
+    final nodes = <_GraphNode>[];
+    final r = result.results;
+    final seen = <String>{};
+
+    void add(String label, Color color) {
+      final key = label.toLowerCase();
+      if (key.isEmpty || !seen.add(key)) return;
+      nodes.add(_GraphNode(label: label, color: color));
+    }
+
+    // Hostnames from Shodan
+    for (final h in ((r['Shodan'] as Map?)?['hostnames'] as List? ?? []).take(4)) {
+      add('$h', TitanTheme.cyan);
+    }
+
+    // Open ports from Shodan
+    for (final p in ((r['Shodan'] as Map?)?['ports'] as List? ?? []).take(5)) {
+      add(':$p', TitanTheme.amber);
+    }
+
+    // A records from SecurityTrails
+    for (final ip in ((r['SecurityTrails'] as Map?)?['a_records'] as List? ?? []).take(4)) {
+      add('$ip', TitanTheme.green);
+    }
+
+    // MX records from SecurityTrails
+    for (final mx in ((r['SecurityTrails'] as Map?)?['mx_records'] as List? ?? []).take(3)) {
+      add('MX:$mx', TitanTheme.orange);
+    }
+
+    // Robtex IP records
+    for (final rec in ((r['Robtex'] as Map?)?['records'] as List? ?? []).take(4)) {
+      if (rec is Map) {
+        final ip = rec['ip'] ?? rec['name'];
+        if (ip != null) add('$ip', TitanTheme.green);
+      }
+    }
+
+    return nodes.take(14).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nodes = _buildNodes();
+    final scoreColor = _levelColor[result.score.label] ?? TitanTheme.indigoLight;
+
+    return Column(
+      children: [
+        Expanded(
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _NetworkPainter(
+              target: result.target,
+              nodes: nodes,
+              scoreColor: scoreColor,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: TitanTheme.borderColor)),
+          ),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              _LegendDot(color: TitanTheme.indigo,  label: 'Target'),
+              _LegendDot(color: TitanTheme.cyan,    label: 'Host'),
+              _LegendDot(color: TitanTheme.green,   label: 'IP'),
+              _LegendDot(color: TitanTheme.amber,   label: 'Port'),
+              _LegendDot(color: TitanTheme.orange,  label: 'MX'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 10, height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(color: TitanTheme.textMuted, fontSize: 11)),
+    ]);
+  }
+}
+
+class _NetworkPainter extends CustomPainter {
+  final String target;
+  final List<_GraphNode> nodes;
+  final Color scoreColor;
+
+  const _NetworkPainter({
+    required this.target,
+    required this.nodes,
+    required this.scoreColor,
+  });
+
+  void _drawLabel(Canvas canvas, String text, Offset pos, double fontSize, Color color) {
+    final maxChars = (fontSize < 10) ? 10 : 13;
+    final label = text.length > maxChars ? '${text.substring(0, maxChars - 2)}..' : text;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(color: color, fontSize: fontSize, fontWeight: FontWeight.w600),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width  / 2;
+    final cy = size.height / 2;
+    final center = Offset(cx, cy);
+    final radius = math.min(cx, cy) * 0.65;
+
+    // Edge paint
+    final edgePaint = Paint()
+      ..color = const Color(0x20FFFFFF)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+
+    // Draw edges first
+    for (int i = 0; i < nodes.length; i++) {
+      final angle = (2 * math.pi * i / nodes.length) - math.pi / 2;
+      final np = Offset(cx + radius * math.cos(angle), cy + radius * math.sin(angle));
+      canvas.drawLine(center, np, edgePaint);
+    }
+
+    // Center node (target)
+    canvas.drawCircle(center, 44,
+        Paint()..color = scoreColor.withAlpha(38)..style = PaintingStyle.fill);
+    canvas.drawCircle(center, 44,
+        Paint()..color = scoreColor..strokeWidth = 2..style = PaintingStyle.stroke);
+    _drawLabel(canvas, target.split('.').first, center, 10, Colors.white);
+    _drawLabel(canvas, nodes.isEmpty ? 'No links' : '',
+        center + const Offset(0, 14), 8, const Color(0xFF94A3B8));
+
+    // Peripheral nodes
+    for (int i = 0; i < nodes.length; i++) {
+      final angle = (2 * math.pi * i / nodes.length) - math.pi / 2;
+      final np = Offset(cx + radius * math.cos(angle), cy + radius * math.sin(angle));
+      final node = nodes[i];
+
+      canvas.drawCircle(np, 26,
+          Paint()..color = node.color.withAlpha(38)..style = PaintingStyle.fill);
+      canvas.drawCircle(np, 26,
+          Paint()..color = node.color.withAlpha(153)..strokeWidth = 1.5..style = PaintingStyle.stroke);
+      _drawLabel(canvas, node.label, np, 9, node.color);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NetworkPainter old) =>
+      old.target != target || old.nodes.length != nodes.length;
 }
