@@ -5,6 +5,7 @@ from .network     import NETWORK_ENGINES
 from .reputation  import REPUTATION_ENGINES
 from .identity    import IDENTITY_ENGINES
 from .developer   import DEV_ENGINES
+from .phone       import PHONE_ENGINES
 
 ALL_ENGINES: dict = {
     **THREAT_ENGINES,
@@ -12,6 +13,7 @@ ALL_ENGINES: dict = {
     **REPUTATION_ENGINES,
     **IDENTITY_ENGINES,
     **DEV_ENGINES,
+    **PHONE_ENGINES,
 }
 
 ENGINE_CATEGORIES = {
@@ -20,6 +22,7 @@ ENGINE_CATEGORIES = {
     "REPUTATION":  list(REPUTATION_ENGINES),
     "IDENTITY":    list(IDENTITY_ENGINES),
     "DEVELOPER":   list(DEV_ENGINES),
+    "PHONE":       list(PHONE_ENGINES),
 }
 
 def run_all(target: str, ttype: str, progress_cb=None) -> dict:

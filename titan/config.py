@@ -60,6 +60,15 @@ CONF: dict[str, str] = {
     "GITHUB_TOKEN":    _e("GITHUB_TOKEN"),
     "GITLAB_TOKEN":    _e("GITLAB_TOKEN"),
     "SNYK_TOKEN":      _e("SNYK_TOKEN"),
+    "BUILTWITH_KEY":   _e("BUILTWITH_KEY"),
+    # New Threat
+    "GSB_KEY":         _e("GOOGLE_SAFE_BROWSING_KEY", "GSB_KEY"),
+    "PHISHTANK_KEY":   _e("PHISHTANK_KEY"),
+    # New Identity / Breach
+    "DEHASHED_KEY":    _e("DEHASHED_KEY"),
+    # New Phone
+    "NUMVERIFY_KEY":   _e("NUMVERIFY_KEY"),
+    "ABSTRACT_KEY":    _e("ABSTRACT_API_KEY", "ABSTRACT_KEY"),
 }
 
 # Derived helpers

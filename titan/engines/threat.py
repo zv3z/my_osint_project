@@ -119,6 +119,77 @@ def _kaspersky(target, ttype):
     except Exception as e:
         return {"error": str(e)}
 
+def _phishtank(target, ttype):
+    try:
+        if ttype not in ("URL", "DOMAIN"):
+            return {"status": "unsupported"}
+        key = CONF.get("PHISHTANK_KEY", "")
+        url_check = target if ttype == "URL" else f"http://{target}"
+        from urllib.parse import quote
+        data = {"url": quote(url_check, safe=""), "format": "json"}
+        if key:
+            data["app_key"] = key
+        r = requests.post("https://checkurl.phishtank.com/checkurl/",
+                          data=data, headers={"User-Agent": "phishtank/TitanOSINT"},
+                          timeout=12)
+        d = r.json().get("results", {})
+        return {"in_database": d.get("in_database", False),
+                "valid": d.get("valid", False),
+                "verified": d.get("verified", False),
+                "phish_id": d.get("phish_id"),
+                "verified_at": d.get("verified_at", "N/A")}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _gsb(target, ttype):
+    try:
+        key = CONF.get("GSB_KEY", "")
+        if not key:
+            return {"status": "no_key"}
+        if ttype not in ("URL", "DOMAIN"):
+            return {"status": "unsupported"}
+        url_check = target if ttype == "URL" else f"http://{target}"
+        payload = {"client": {"clientId": "titan-osint", "clientVersion": "1.0"},
+                   "threatInfo": {"threatTypes": ["MALWARE","SOCIAL_ENGINEERING","UNWANTED_SOFTWARE","POTENTIALLY_HARMFUL_APPLICATION"],
+                                  "platformTypes": ["ANY_PLATFORM"],
+                                  "threatEntryTypes": ["URL"],
+                                  "threatEntries": [{"url": url_check}]}}
+        r = requests.post(f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={key}",
+                          json=payload, timeout=10)
+        matches = r.json().get("matches", [])
+        return {"safe": len(matches) == 0,
+                "threats": [m.get("threatType") for m in matches],
+                "platform": [m.get("platformType") for m in matches[:3]]}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _threatminer(target, ttype):
+    try:
+        if ttype == "IP":
+            ep, param = "host.php", "host"
+        elif ttype == "DOMAIN":
+            ep, param = "domain.php", "domain"
+        elif ttype in ("MD5", "SHA1", "SHA256"):
+            ep, param = "sample.php", "hash"
+        else:
+            return {"status": "unsupported"}
+        r = requests.get(f"https://api.threatminer.org/v2/{ep}",
+                         params={param: target, "rt": "1"}, timeout=12)
+        d = r.json()
+        results = d.get("results", [])
+        # rt=2 passive DNS
+        r2 = requests.get(f"https://api.threatminer.org/v2/{ep}",
+                          params={param: target, "rt": "2"}, timeout=12)
+        pdns = r2.json().get("results", [])[:8]
+        return {"status_code": d.get("status_code", "N/A"),
+                "whois_entries": len(results),
+                "pdns_records": len(pdns),
+                "pdns_sample": [{"ip": p.get("ip",""), "domain": p.get("domain","")}
+                                for p in pdns[:5]],
+                "whois_preview": results[0] if results else {}}
+    except Exception as e:
+        return {"error": str(e)}
+
 THREAT_ENGINES = {
     "VirusTotal":    _vt,
     "AlienVault OTX":_alienvault,
@@ -128,4 +199,7 @@ THREAT_ENGINES = {
     "HybridAnalysis":_hybrid,
     "Pulsedive":     _pulsedive,
     "Kaspersky TIP": _kaspersky,
+    "PhishTank":     _phishtank,
+    "Google SafeBrowsing": _gsb,
+    "ThreatMiner":   _threatminer,
 }

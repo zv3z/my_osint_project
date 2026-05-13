@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ('Email',        Icons.email_outlined,           'user@example.com'),
     ('Hash',         Icons.fingerprint_outlined,     'MD5 / SHA256'),
     ('URL',          Icons.link_outlined,            'https://...'),
+    ('Phone',        Icons.phone_outlined,           '+1-555-0100'),
     ('GitHub',       Icons.code_outlined,            '@username'),
     ('ASN',          Icons.hub_outlined,             'AS15169'),
     ('npm',          Icons.inventory_2_outlined,     'package-name'),
@@ -59,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     try {
       final lang = context.read<AppState>().lang;
-      setState(() => _status = 'Running 33+ engines...');
+      setState(() => _status = 'Running 50+ engines...');
       final data = await ApiService.scan(target, lang: lang);
       final result = ScanResult.fromJson(data);
 
@@ -226,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   fontSize: 16, fontWeight: FontWeight.w700,
                   color: TitanTheme.textPrimary)),
           const SizedBox(height: 4),
-          const Text('Enter an IP, domain, email, hash, URL, ASN, or GitHub username',
+          const Text('IP · Domain · Email · Hash · URL · Phone · ASN · Username',
               style: TextStyle(fontSize: 12, color: TitanTheme.textMuted)),
           const SizedBox(height: 14),
           TextField(
@@ -235,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             style: const TextStyle(fontFamily: 'monospace',
                 fontSize: 14, color: TitanTheme.textPrimary),
             decoration: const InputDecoration(
-              hintText: '8.8.8.8 / google.com / user@email.com',
+              hintText: '8.8.8.8 / google.com / user@email.com / +1-555-0100',
               prefixIcon: Icon(Icons.search, color: TitanTheme.textMuted, size: 20),
               suffixIcon: null,
             ),
@@ -312,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildFeatureGrid() {
     final features = [
-      (Icons.shield_outlined,      '33+ Engines',      'Parallel threat scanning',        TitanTheme.indigo),
+      (Icons.shield_outlined,      '50+ Engines',      'Parallel threat scanning',        TitanTheme.indigo),
       (Icons.psychology_outlined,  'AI Analysis',      'Gemini & GPT-4 fusion',           TitanTheme.cyan),
       (Icons.map_outlined,         'Geo Intelligence', 'IP geolocation mapping',          TitanTheme.green),
       (Icons.hub_outlined,         'Network Graph',    'Relationship visualization',       TitanTheme.amber),

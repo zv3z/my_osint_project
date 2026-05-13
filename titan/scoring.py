@@ -1,18 +1,27 @@
 """Threat scoring engine — aggregates engine results into a single risk score"""
 
 WEIGHTS = {
-    "VirusTotal":     {"malicious": 4, "suspicious": 2},
-    "AlienVault OTX": {"pulse_count": 0.5},
-    "AbuseIPDB":      {"abuseConfidenceScore": 0.8},
-    "ThreatFox":      {"total": 3},
-    "URLhaus":        {"urls_count": 2},
-    "GreyNoise":      {"noise": 10},
-    "CriminalIP":     {"is_vpn": 5, "is_tor": 20, "is_proxy": 5, "is_scanner": 10},
-    "IPQS":           {"fraud_score": 0.6, "tor": 20, "proxy": 10, "vpn": 8},
-    "HaveIBeenPwned": {"count": 5},
-    "LeakCheck":      {"found": 15},
-    "MalwareBazaar":  {"file_name": 30},
-    "HybridAnalysis": {"count": 2},
+    "VirusTotal":        {"malicious": 4, "suspicious": 2},
+    "AlienVault OTX":    {"pulse_count": 0.5},
+    "AbuseIPDB":         {"abuseConfidenceScore": 0.8},
+    "ThreatFox":         {"total": 3},
+    "URLhaus":           {"urls_count": 2},
+    "GreyNoise":         {"noise": 10},
+    "CriminalIP":        {"is_vpn": 5, "is_tor": 20, "is_proxy": 5, "is_scanner": 10},
+    "IPQS":              {"fraud_score": 0.6, "tor": 20, "proxy": 10, "vpn": 8},
+    "HaveIBeenPwned":    {"count": 5},
+    "LeakCheck":         {"found": 15},
+    "MalwareBazaar":     {"file_name": 30},
+    "HybridAnalysis":    {"count": 2},
+    # New engines
+    "PhishTank":         {"in_database": 40, "verified": 20},
+    "Google SafeBrowsing":{"safe": -5},
+    "ThreatMiner":       {"pdns_records": 0.3},
+    "EmailRep":          {"suspicious": 15, "malicious_activity": 25,
+                          "credentials_leaked": 20, "data_breach": 15},
+    "StopForumSpam":     {"appears": 12},
+    "SpamHaus":          {"zone_count": 15},
+    "Dehashed":          {"total": 0.2},
 }
 
 RISK_LABELS = {

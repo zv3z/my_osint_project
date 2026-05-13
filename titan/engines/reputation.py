@@ -82,11 +82,71 @@ def _wigle(target, ttype):
     except Exception as e:
         return {"error": str(e)}
 
+def _emailrep(target, ttype):
+    try:
+        if ttype != "EMAIL":
+            return {"status": "email_only"}
+        r = requests.get(f"https://emailrep.io/{target}",
+                         headers={"User-Agent": "TitanOSINT/3.0"}, timeout=10)
+        if r.status_code != 200:
+            return {"status": f"http_{r.status_code}"}
+        d = r.json()
+        return {"reputation": d.get("reputation", "N/A"),
+                "suspicious": d.get("suspicious", False),
+                "spam": d.get("details", {}).get("spam", False),
+                "malicious_activity": d.get("details", {}).get("malicious_activity", False),
+                "credentials_leaked": d.get("details", {}).get("credentials_leaked", False),
+                "data_breach": d.get("details", {}).get("data_breach", False),
+                "days_since_domain_creation": d.get("details", {}).get("days_since_domain_creation", -1),
+                "profiles": d.get("details", {}).get("profiles", [])[:5]}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _stopforumspam(target, ttype):
+    try:
+        if ttype not in ("IP", "EMAIL"):
+            return {"status": "unsupported"}
+        param = "ip" if ttype == "IP" else "email"
+        r = requests.get("https://api.stopforumspam.org/api",
+                         params={param: target, "json": 1}, timeout=10)
+        d = r.json()
+        field = d.get(param, {})
+        return {"appears": field.get("appears", 0) == 1,
+                "frequency": field.get("frequency", 0),
+                "lastseen": field.get("lastseen", "N/A"),
+                "confidence": field.get("confidence", 0)}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _spamhaus(target, ttype):
+    try:
+        if ttype != "IP":
+            return {"status": "ip_only"}
+        import socket, ipaddress
+        try:
+            ipaddress.ip_address(target)
+        except ValueError:
+            return {"status": "invalid_ip"}
+        reversed_ip = ".".join(target.split(".")[::-1])
+        listed, zones = [], ["zen.spamhaus.org", "xbl.spamhaus.org", "sbl.spamhaus.org"]
+        for zone in zones:
+            try:
+                socket.gethostbyname(f"{reversed_ip}.{zone}")
+                listed.append(zone.split(".")[0].upper())
+            except socket.gaierror:
+                pass
+        return {"listed": bool(listed), "zones": listed, "zone_count": len(listed)}
+    except Exception as e:
+        return {"error": str(e)}
+
 REPUTATION_ENGINES = {
-    "AbuseIPDB": _abuseipdb,
-    "IPQS":      _ipqs,
-    "URLScan":   _urlscan,
-    "Vulners":   _vulners,
-    "PublicWWW": _publicwww,
-    "Wigle":     _wigle,
+    "AbuseIPDB":    _abuseipdb,
+    "IPQS":         _ipqs,
+    "URLScan":      _urlscan,
+    "Vulners":      _vulners,
+    "PublicWWW":    _publicwww,
+    "Wigle":        _wigle,
+    "EmailRep":     _emailrep,
+    "StopForumSpam":_stopforumspam,
+    "SpamHaus":     _spamhaus,
 }
