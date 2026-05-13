@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../main.dart';
-import '../models/scan_result.dart';
 import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
 
@@ -149,10 +148,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         Container(
                                           width: 46, height: 46,
                                           decoration: BoxDecoration(
-                                            color: col.withOpacity(0.1),
+                                            color: col.withAlpha(25),
                                             borderRadius: BorderRadius.circular(12),
                                             border: Border.all(
-                                                color: col.withOpacity(0.3)),
+                                                color: col.withAlpha(76)),
                                           ),
                                           child: Center(
                                             child: Text('$score',
@@ -183,7 +182,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                         horizontal: 7, vertical: 2),
                                                     decoration: BoxDecoration(
                                                       color: TitanTheme.indigo
-                                                          .withOpacity(0.1),
+                                                          .withAlpha(25),
                                                       borderRadius:
                                                           BorderRadius.circular(6),
                                                     ),
@@ -210,7 +209,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: col.withOpacity(0.1),
+                                            color: col.withAlpha(25),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(label,

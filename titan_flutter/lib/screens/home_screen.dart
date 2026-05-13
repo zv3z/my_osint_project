@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         colors: [TitanTheme.indigo, TitanTheme.cyan]),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
-                        BoxShadow(color: TitanTheme.indigo.withOpacity(0.4),
+                        BoxShadow(color: TitanTheme.indigo.withAlpha(102),
                             blurRadius: 16),
                       ],
                     ),
@@ -183,10 +183,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: TitanTheme.green.withOpacity(0.12),
+                          color: TitanTheme.green.withAlpha(30),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: TitanTheme.green.withOpacity(0.3)),
+                              color: TitanTheme.green.withAlpha(76)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -258,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             label: Text(_scanning ? 'Scanning...' : 'Run Engines'),
             style: ElevatedButton.styleFrom(
               backgroundColor: TitanTheme.indigo,
-              disabledBackgroundColor: TitanTheme.indigo.withOpacity(0.4),
+              disabledBackgroundColor: TitanTheme.indigo.withAlpha(102),
             ),
           ),
         ],

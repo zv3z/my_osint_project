@@ -1,7 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 import '../main.dart';
 import '../models/scan_result.dart';
@@ -134,10 +134,10 @@ class _ResultScreenState extends State<ResultScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                        color: TitanTheme.indigo.withOpacity(0.15),
+                        color: TitanTheme.indigo.withAlpha(38),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: TitanTheme.indigo.withOpacity(0.3)),
+                            color: TitanTheme.indigo.withAlpha(76)),
                       ),
                       child: Text(
                         r.ttype.toUpperCase(),
@@ -203,7 +203,6 @@ class _DashboardTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Metrics row
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -244,7 +243,6 @@ class _DashboardTab extends StatelessWidget {
                 icon: Icons.check_circle_outline),
           ],
         ),
-
         const SizedBox(height: 16),
 
         // Threat score bar
@@ -258,12 +256,11 @@ class _DashboardTab extends StatelessWidget {
                       color: TitanTheme.textMuted, letterSpacing: 0.1)),
               const SizedBox(height: 12),
               Stack(
-                alignment: Alignment.centerLeft,
                 children: [
                   Container(
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withAlpha(15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -273,11 +270,11 @@ class _DashboardTab extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                            colors: [scoreColor.withOpacity(0.7), scoreColor]),
+                            colors: [scoreColor.withAlpha(178), scoreColor]),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                              color: scoreColor.withOpacity(0.4),
+                              color: scoreColor.withAlpha(102),
                               blurRadius: 8)
                         ],
                       ),
@@ -303,7 +300,6 @@ class _DashboardTab extends StatelessWidget {
             ],
           ),
         ),
-
         const SizedBox(height: 16),
 
         // Infrastructure
@@ -327,8 +323,10 @@ class _DashboardTab extends StatelessWidget {
                 ('VPN',     cip['is_vpn']?.toString()),
                 ('TOR',     cip['is_tor']?.toString()),
               ].where((e) =>
-                  e.$2 != null && e.$2.toString().isNotEmpty &&
-                  e.$2 != 'null' && e.$2 != 'false').map((e) =>
+                  e.$2 != null &&
+                  e.$2.toString().isNotEmpty &&
+                  e.$2 != 'null' &&
+                  e.$2 != 'false').map((e) =>
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
@@ -343,7 +341,8 @@ class _DashboardTab extends StatelessWidget {
                       Expanded(
                         child: Text('${e.$2}',
                             style: const TextStyle(
-                                fontSize: 13, color: TitanTheme.textPrimary)),
+                                fontSize: 13,
+                                color: TitanTheme.textPrimary)),
                       ),
                     ],
                   ),
@@ -352,7 +351,6 @@ class _DashboardTab extends StatelessWidget {
             ],
           ),
         ),
-
         const SizedBox(height: 16),
 
         // Engine contributions
@@ -367,9 +365,9 @@ class _DashboardTab extends StatelessWidget {
                         color: TitanTheme.textMuted, letterSpacing: 0.1)),
                 const SizedBox(height: 12),
                 ...result.score.contributions.entries.map((e) {
-                  final max = result.score.contributions.values
+                  final maxVal = result.score.contributions.values
                       .reduce((a, b) => a > b ? a : b);
-                  final pct = e.value / max;
+                  final pct = e.value / maxVal;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Column(
@@ -380,10 +378,12 @@ class _DashboardTab extends StatelessWidget {
                           children: [
                             Text(e.key,
                                 style: const TextStyle(
-                                    fontSize: 12, color: TitanTheme.textSecondary)),
+                                    fontSize: 12,
+                                    color: TitanTheme.textSecondary)),
                             Text('${e.value.toStringAsFixed(0)}pts',
                                 style: TextStyle(
-                                    fontSize: 11, fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
                                     color: scoreColor)),
                           ],
                         ),
@@ -393,7 +393,7 @@ class _DashboardTab extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: pct,
                             minHeight: 4,
-                            backgroundColor: Colors.white.withOpacity(0.06),
+                            backgroundColor: Colors.white.withAlpha(15),
                             color: scoreColor,
                           ),
                         ),
@@ -406,42 +406,43 @@ class _DashboardTab extends StatelessWidget {
           ),
 
         // Open ports
-        if ((result.results['Shodan'] as Map?)?.containsKey('ports') == true)
-          ...[
-            const SizedBox(height: 16),
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('OPEN PORTS',
-                      style: GoogleFonts.spaceGrotesk(
-                          fontSize: 11, fontWeight: FontWeight.w600,
-                          color: TitanTheme.textMuted, letterSpacing: 0.1)),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6, runSpacing: 6,
-                    children: ((result.results['Shodan'] as Map)['ports'] as List? ?? [])
-                        .take(40)
-                        .map((p) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: TitanTheme.cyan.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color: TitanTheme.cyan.withOpacity(0.2)),
-                              ),
-                              child: Text('$p',
-                                  style: const TextStyle(
-                                      fontSize: 12, color: TitanTheme.cyan,
-                                      fontFamily: 'monospace')),
-                            ))
-                        .toList(),
-                  ),
-                ],
-              ),
+        if ((result.results['Shodan'] as Map?)?.containsKey('ports') == true) ...[
+          const SizedBox(height: 16),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('OPEN PORTS',
+                    style: GoogleFonts.spaceGrotesk(
+                        fontSize: 11, fontWeight: FontWeight.w600,
+                        color: TitanTheme.textMuted, letterSpacing: 0.1)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: ((result.results['Shodan'] as Map)['ports'] as List? ?? [])
+                      .take(40)
+                      .map((p) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: TitanTheme.cyan.withAlpha(20),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: TitanTheme.cyan.withAlpha(51)),
+                            ),
+                            child: Text('$p',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: TitanTheme.cyan,
+                                    fontFamily: 'monospace')),
+                          ))
+                      .toList(),
+                ),
+              ],
             ),
-          ],
+          ),
+        ],
 
         const SizedBox(height: 80),
       ],
@@ -457,32 +458,32 @@ class _SignalsTab extends StatelessWidget {
   const _SignalsTab({required this.result});
 
   List<Signal> _buildSignals() {
-    final r     = result.results;
-    final sigs  = <Signal>[];
+    final r    = result.results;
+    final sigs = <Signal>[];
 
-    int vt_m  = ((r['VirusTotal']     as Map?)??{})['malicious']            ?? 0;
-    int ab_s  = ((r['AbuseIPDB']      as Map?)??{})['abuseConfidenceScore'] ?? 0;
-    int tf_t  = ((r['ThreatFox']      as Map?)??{})['total']                ?? 0;
-    int uh_c  = ((r['URLhaus']        as Map?)??{})['urls_count']           ?? 0;
-    int otx_p = ((r['AlienVault OTX'] as Map?)??{})['pulse_count']          ?? 0;
-    int hibp  = ((r['HaveIBeenPwned'] as Map?)??{})['count']                ?? 0;
+    final vtM  = ((r['VirusTotal']     as Map?)??{})['malicious']            as int? ?? 0;
+    final abS  = ((r['AbuseIPDB']      as Map?)??{})['abuseConfidenceScore'] as int? ?? 0;
+    final tfT  = ((r['ThreatFox']      as Map?)??{})['total']                as int? ?? 0;
+    final uhC  = ((r['URLhaus']        as Map?)??{})['urls_count']           as int? ?? 0;
+    final otxP = ((r['AlienVault OTX'] as Map?)??{})['pulse_count']          as int? ?? 0;
+    final hibp = ((r['HaveIBeenPwned'] as Map?)??{})['count']                as int? ?? 0;
 
-    if (vt_m > 0)  sigs.add(Signal(level: vt_m > 5 ? 'CRITICAL' : 'HIGH',   engine: 'VirusTotal',    message: '$vt_m malicious detections'));
-    if (ab_s > 30) sigs.add(Signal(level: ab_s > 70 ? 'HIGH' : 'MEDIUM',    engine: 'AbuseIPDB',     message: 'Abuse score $ab_s%'));
-    if (tf_t > 0)  sigs.add(Signal(level: 'HIGH',  engine: 'ThreatFox',     message: '$tf_t IOC matches'));
-    if (uh_c > 0)  sigs.add(Signal(level: 'HIGH',  engine: 'URLhaus',        message: '$uh_c malicious URLs'));
-    if (otx_p > 0) sigs.add(Signal(level: 'MEDIUM', engine: 'AlienVault OTX', message: '$otx_p threat pulses'));
-    if (hibp > 0)  sigs.add(Signal(level: 'HIGH',  engine: 'HaveIBeenPwned', message: 'Found in $hibp breaches'));
+    if (vtM  > 0) sigs.add(Signal(level: vtM > 5 ? 'CRITICAL' : 'HIGH',  engine: 'VirusTotal',     message: '$vtM malicious detections'));
+    if (abS  > 30) sigs.add(Signal(level: abS > 70 ? 'HIGH' : 'MEDIUM',  engine: 'AbuseIPDB',      message: 'Abuse score $abS%'));
+    if (tfT  > 0) sigs.add(Signal(level: 'HIGH',  engine: 'ThreatFox',    message: '$tfT IOC matches'));
+    if (uhC  > 0) sigs.add(Signal(level: 'HIGH',  engine: 'URLhaus',       message: '$uhC malicious URLs'));
+    if (otxP > 0) sigs.add(Signal(level: 'MEDIUM', engine: 'AlienVault OTX', message: '$otxP threat pulses'));
+    if (hibp > 0) sigs.add(Signal(level: 'HIGH',  engine: 'HaveIBeenPwned', message: 'Found in $hibp breaches'));
 
-    final grey = (r['GreyNoise'] as Map?) ?? {};
+    final grey = (r['GreyNoise']  as Map?) ?? {};
     final cip  = (r['CriminalIP'] as Map?) ?? {};
-    final ipqs = (r['IPQS'] as Map?) ?? {};
-    final lk   = (r['LeakCheck'] as Map?) ?? {};
+    final ipqs = (r['IPQS']       as Map?) ?? {};
+    final lk   = (r['LeakCheck']  as Map?) ?? {};
 
-    if (grey['noise'] == true)  sigs.add(Signal(level: 'MEDIUM', engine: 'GreyNoise',  message: 'Known internet scanner'));
-    if (cip['is_tor'] == true)  sigs.add(Signal(level: 'HIGH',   engine: 'CriminalIP', message: 'TOR exit node'));
+    if (grey['noise'] == true)     sigs.add(Signal(level: 'MEDIUM', engine: 'GreyNoise',  message: 'Known internet scanner'));
+    if (cip['is_tor'] == true)     sigs.add(Signal(level: 'HIGH',   engine: 'CriminalIP', message: 'TOR exit node'));
     if (cip['is_scanner'] == true) sigs.add(Signal(level: 'MEDIUM', engine: 'CriminalIP', message: 'Active scanner'));
-    if (ipqs['tor'] == true)    sigs.add(Signal(level: 'HIGH',   engine: 'IPQS',       message: 'TOR detected'));
+    if (ipqs['tor'] == true)       sigs.add(Signal(level: 'HIGH',   engine: 'IPQS',       message: 'TOR detected'));
     if (lk['found'] == true || lk['result'] != null)
       sigs.add(Signal(level: 'HIGH', engine: 'LeakCheck', message: 'Credentials in leak DB'));
 
@@ -509,8 +510,8 @@ class _SignalsTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: signals.isEmpty
-                      ? TitanTheme.green.withOpacity(0.12)
-                      : TitanTheme.red.withOpacity(0.12),
+                      ? TitanTheme.green.withAlpha(30)
+                      : TitanTheme.red.withAlpha(30),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('${signals.length} signals',
@@ -530,7 +531,7 @@ class _SignalsTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: TitanTheme.green.withOpacity(0.12),
+                    color: TitanTheme.green.withAlpha(30),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.check_circle_outline,
@@ -548,7 +549,6 @@ class _SignalsTab extends StatelessWidget {
           ...signals.map((s) => SignalRow(
               level: s.level, engine: s.engine, message: s.message)),
 
-        // IOC Summary
         if (result.iocData != null && result.iocData!.iocs.isNotEmpty) ...[
           const SizedBox(height: 20),
           Text('IOC INDICATORS',
@@ -567,7 +567,7 @@ class _SignalsTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: TitanTheme.indigo.withOpacity(0.12),
+                        color: TitanTheme.indigo.withAlpha(30),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text('${m['type'] ?? ''}',
@@ -585,8 +585,7 @@ class _SignalsTab extends StatelessWidget {
                     ),
                     GestureDetector(
                       onTap: () {
-                        Clipboard.setData(ClipboardData(
-                            text: '${m['value'] ?? ''}'));
+                        Clipboard.setData(ClipboardData(text: '${m['value'] ?? ''}'));
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Copied!')));
                       },
@@ -599,6 +598,7 @@ class _SignalsTab extends StatelessWidget {
             );
           }),
         ],
+
         const SizedBox(height: 80),
       ],
     );
@@ -618,6 +618,15 @@ class _RawDataTab extends StatefulWidget {
 
 class _RawDataTabState extends State<_RawDataTab> {
   String _filter = '';
+
+  String _prettyJson(dynamic v) {
+    try {
+      final encoder = const JsonEncoder.withIndent('  ');
+      return encoder.convert(v);
+    } catch (_) {
+      return '$v';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -654,24 +663,25 @@ class _RawDataTabState extends State<_RawDataTab> {
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
                         color: hasErr
-                            ? TitanTheme.red.withOpacity(0.3)
+                            ? TitanTheme.red.withAlpha(76)
                             : TitanTheme.borderColor),
                   ),
                   collapsedShape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
                         color: hasErr
-                            ? TitanTheme.red.withOpacity(0.3)
+                            ? TitanTheme.red.withAlpha(76)
                             : TitanTheme.borderColor),
                   ),
                   backgroundColor: TitanTheme.bgCard,
                   collapsedBackgroundColor: TitanTheme.bgCard,
                   leading: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: hasErr
-                          ? TitanTheme.red.withOpacity(0.1)
-                          : TitanTheme.green.withOpacity(0.1),
+                          ? TitanTheme.red.withAlpha(25)
+                          : TitanTheme.green.withAlpha(25),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(hasErr ? 'ERR' : 'OK',
@@ -690,8 +700,10 @@ class _RawDataTabState extends State<_RawDataTab> {
                       child: SelectableText(
                         _prettyJson(e.value),
                         style: const TextStyle(
-                            fontSize: 11, color: TitanTheme.textSecondary,
-                            fontFamily: 'monospace', height: 1.5),
+                            fontSize: 11,
+                            color: TitanTheme.textSecondary,
+                            fontFamily: 'monospace',
+                            height: 1.5),
                       ),
                     ),
                   ],
@@ -702,15 +714,6 @@ class _RawDataTabState extends State<_RawDataTab> {
         ),
       ],
     );
-  }
-
-  String _prettyJson(dynamic v) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      return encoder.convert(v);
-    } catch (_) {
-      return '$v';
-    }
   }
 }
 
@@ -726,14 +729,20 @@ class _NotesTab extends StatefulWidget {
 }
 
 class _NotesTabState extends State<_NotesTab> {
-  final _ctrl     = TextEditingController();
-  List<dynamic> _notes = [];
-  bool _loading   = true;
+  final _ctrl   = TextEditingController();
+  List<dynamic> _notes  = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadNotes() async {
@@ -766,8 +775,8 @@ class _NotesTabState extends State<_NotesTab> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.note_outlined,
-                              size: 48, color: TitanTheme.textMuted),
+                          Icon(Icons.note_outlined, size: 48,
+                              color: TitanTheme.textMuted),
                           SizedBox(height: 8),
                           Text('No notes yet',
                               style: TextStyle(color: TitanTheme.textMuted)),
@@ -801,9 +810,9 @@ class _NotesTabState extends State<_NotesTab> {
                       },
                     ),
         ),
-        // Note input
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+              16, 10, 16, MediaQuery.of(context).viewInsets.bottom + 16),
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: TitanTheme.borderColor)),
           ),
@@ -813,8 +822,7 @@ class _NotesTabState extends State<_NotesTab> {
                 child: TextField(
                   controller: _ctrl,
                   decoration: const InputDecoration(
-                    hintText: 'Add analyst note...',
-                  ),
+                      hintText: 'Add analyst note...'),
                   maxLines: null,
                 ),
               ),
@@ -833,14 +841,4 @@ class _NotesTabState extends State<_NotesTab> {
       ],
     );
   }
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-import 'dart:convert';
-
-class JsonEncoder {
-  final String indent;
-  const JsonEncoder.withIndent(this.indent);
-  String convert(dynamic v) =>
-      const JsonEncoder().convert(v).replaceAll(',', ',\n  ');
 }

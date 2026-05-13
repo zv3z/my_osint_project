@@ -1,0 +1,126 @@
+name: Build Titan OSINT Mobile App
+
+on:
+  push:
+    branches: [main, "claude/mobile-app-modern-ui-wpNFG"]
+    paths:
+      - "titan_flutter/**"
+      - ".github/workflows/build-mobile.yml"
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: titan_flutter
+        run: flutter pub get
+
+      - name: Analyze code
+        working-directory: titan_flutter
+        run: flutter analyze --no-fatal-infos || true
+
+      - name: Build APK (release)
+        working-directory: titan_flutter
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE=http://YOUR_SERVER_IP:8000 \
+            --split-per-abi
+
+      - name: Build APK (universal, easier to install)
+        working-directory: titan_flutter
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE=http://YOUR_SERVER_IP:8000
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: titan-osint-apk
+          path: |
+            titan_flutter/build/app/outputs/apk/release/app-release.apk
+            titan_flutter/build/app/outputs/apk/release/app-arm64-v8a-release.apk
+            titan_flutter/build/app/outputs/apk/release/app-armeabi-v7a-release.apk
+          retention-days: 30
+
+      - name: Upload build summary
+        run: |
+          echo "## ✅ Android Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download the APK:" >> $GITHUB_STEP_SUMMARY
+          echo "Go to **Actions → This run → Artifacts → titan-osint-apk**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install on Android:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download \`app-release.apk\` to your phone" >> $GITHUB_STEP_SUMMARY
+          echo "2. Enable **Install from unknown sources** in Settings → Security" >> $GITHUB_STEP_SUMMARY
+          echo "3. Open the APK file and install" >> $GITHUB_STEP_SUMMARY
+          echo "4. Open Titan OSINT → Settings → set your API server IP" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          APK_SIZE=$(du -sh titan_flutter/build/app/outputs/apk/release/app-release.apk 2>/dev/null | cut -f1 || echo "N/A")
+          echo "**APK Size:** $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: titan_flutter
+        run: flutter pub get
+
+      - name: Build iOS (no signing — for simulator/TestFlight)
+        working-directory: titan_flutter
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=API_BASE=http://YOUR_SERVER_IP:8000
+
+      - name: Create IPA archive
+        working-directory: titan_flutter
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/Release-iphoneos/Runner.app \
+                build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r ../titan-osint.ipa Payload/
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: titan-osint-ipa
+          path: titan_flutter/build/ios/titan-osint.ipa
+          retention-days: 30
+
+      - name: iOS build summary
+        run: |
+          echo "## ✅ iOS Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install on iOS:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download \`titan-osint.ipa\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Use **AltStore** or **Sideloadly** to install (free, no jailbreak)" >> $GITHUB_STEP_SUMMARY
+          echo "3. Or enroll in Apple TestFlight for distribution" >> $GITHUB_STEP_SUMMARY

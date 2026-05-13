@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class ScanResult {
   final String target;
   final String ttype;
@@ -18,13 +20,15 @@ class ScanResult {
   });
 
   factory ScanResult.fromJson(Map<String, dynamic> j) => ScanResult(
-        target:    j['target'] ?? '',
-        ttype:     j['ttype'] ?? '',
-        fromCache: j['from_cache'] ?? false,
-        scanTs:    j['scan_ts'] ?? '',
-        score:     ScoreData.fromJson(j['score'] ?? {}),
-        iocData:   j['ioc_data'] != null ? IocData.fromJson(j['ioc_data']) : null,
-        results:   Map<String, dynamic>.from(j['results'] ?? {}),
+        target:    j['target'] as String? ?? '',
+        ttype:     j['ttype']  as String? ?? '',
+        fromCache: j['from_cache'] as bool? ?? false,
+        scanTs:    j['scan_ts']    as String? ?? '',
+        score:     ScoreData.fromJson(j['score'] as Map<String, dynamic>? ?? {}),
+        iocData:   j['ioc_data'] != null
+            ? IocData.fromJson(j['ioc_data'] as Map<String, dynamic>)
+            : null,
+        results: Map<String, dynamic>.from(j['results'] as Map? ?? {}),
       );
 }
 
@@ -44,12 +48,14 @@ class ScoreData {
   });
 
   factory ScoreData.fromJson(Map<String, dynamic> j) => ScoreData(
-        score: (j['score'] ?? 0).toInt(),
-        label: j['label'] ?? 'N/A',
-        color: j['color'] ?? '#888888',
-        icon:  j['icon']  ?? '',
+        score: (j['score'] as num?)?.toInt() ?? 0,
+        label: j['label'] as String? ?? 'N/A',
+        color: j['color'] as String? ?? '#888888',
+        icon:  j['icon']  as String? ?? '',
         contributions: Map<String, double>.from(
-          (j['contributions'] ?? {}).map((k, v) => MapEntry(k, (v as num).toDouble())),
+          (j['contributions'] as Map? ?? {}).map(
+            (k, v) => MapEntry(k as String, (v as num).toDouble()),
+          ),
         ),
       );
 
@@ -70,8 +76,8 @@ class IocData {
   IocData({required this.summary, required this.iocs});
 
   factory IocData.fromJson(Map<String, dynamic> j) => IocData(
-        summary: Map<String, dynamic>.from(j['summary'] ?? {}),
-        iocs:    List<dynamic>.from(j['iocs'] ?? []),
+        summary: Map<String, dynamic>.from(j['summary'] as Map? ?? {}),
+        iocs:    List<dynamic>.from(j['iocs'] as List? ?? []),
       );
 }
 
@@ -79,12 +85,5 @@ class Signal {
   final String level;
   final String engine;
   final String message;
-
   Signal({required this.level, required this.engine, required this.message});
-}
-
-// ignore: avoid_classes_with_only_static_members
-class Color {
-  final int value;
-  const Color(this.value);
 }

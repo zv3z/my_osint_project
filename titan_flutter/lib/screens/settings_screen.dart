@@ -51,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: TitanTheme.indigo.withOpacity(0.4),
+                          color: TitanTheme.indigo.withAlpha(102),
                           blurRadius: 24),
                     ],
                   ),
@@ -210,11 +210,11 @@ class _LangButton extends StatelessWidget {
           margin: const EdgeInsets.all(4),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? TitanTheme.indigo.withOpacity(0.2) : Colors.transparent,
+            color: selected ? TitanTheme.indigo.withAlpha(51) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: selected
-                  ? TitanTheme.indigo.withOpacity(0.5)
+                  ? TitanTheme.indigo.withAlpha(127)
                   : Colors.transparent,
             ),
           ),
@@ -249,9 +249,9 @@ class _Step extends StatelessWidget {
           Container(
             width: 24, height: 24,
             decoration: BoxDecoration(
-              color: TitanTheme.indigo.withOpacity(0.15),
+              color: TitanTheme.indigo.withAlpha(38),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: TitanTheme.indigo.withOpacity(0.4)),
+              border: Border.all(color: TitanTheme.indigo.withAlpha(102)),
             ),
             child: Center(
               child: Text(n,
@@ -276,7 +276,7 @@ class _Step extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withAlpha(76),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(cmd!,

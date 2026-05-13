@@ -190,7 +190,7 @@ class _AiTabState extends State<AiTab> {
                       onTap: () => setState(() => _messages.clear()),
                       child: Text('Clear',
                           style: TextStyle(
-                              fontSize: 12, color: TitanTheme.red.withOpacity(0.7))),
+                              fontSize: 12, color: TitanTheme.red.withAlpha(178))),
                     ),
                   ],
                 ),
@@ -298,7 +298,7 @@ class _AiTabState extends State<AiTab> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: isUser
-                    ? TitanTheme.indigo.withOpacity(0.15)
+                    ? TitanTheme.indigo.withAlpha(38)
                     : TitanTheme.bgCard,
                 borderRadius: BorderRadius.only(
                   topLeft:     const Radius.circular(16),
@@ -308,7 +308,7 @@ class _AiTabState extends State<AiTab> {
                 ),
                 border: Border.all(
                   color: isUser
-                      ? TitanTheme.indigo.withOpacity(0.3)
+                      ? TitanTheme.indigo.withAlpha(76)
                       : TitanTheme.borderColor,
                 ),
               ),

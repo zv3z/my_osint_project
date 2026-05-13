@@ -30,7 +30,7 @@ class GlassCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withAlpha(76),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -125,7 +125,7 @@ class SignalRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: col.withOpacity(0.07),
+        color: col.withAlpha(18),
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: col, width: 3)),
       ),
@@ -187,8 +187,8 @@ class ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      backgroundColor: color.withOpacity(0.08),
-      borderColor: color.withOpacity(0.35),
+      backgroundColor: color.withAlpha(20),
+      borderColor: color.withAlpha(89),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       child: Column(
         children: [
