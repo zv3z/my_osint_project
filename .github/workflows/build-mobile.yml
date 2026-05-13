@@ -28,9 +28,14 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.1"
           channel: stable
           cache: true
+
+      - name: Bootstrap missing platform files
+        working-directory: titan_flutter
+        run: |
+          flutter create --no-pub --project-name titan_osint --org com.titan .
+          git checkout android/app/src/main/AndroidManifest.xml
 
       - name: Get dependencies
         working-directory: titan_flutter
@@ -86,9 +91,12 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.1"
           channel: stable
           cache: true
+
+      - name: Bootstrap missing platform files
+        working-directory: titan_flutter
+        run: flutter create --no-pub --project-name titan_osint --org com.titan .
 
       - name: Get dependencies
         working-directory: titan_flutter
@@ -227,9 +235,14 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.1"
           channel: stable
           cache: true
+
+      - name: Bootstrap missing platform files
+        working-directory: titan_flutter
+        run: |
+          flutter create --no-pub --project-name titan_osint --org com.titan .
+          git checkout ios/Runner/Info.plist
 
       - name: Get dependencies
         working-directory: titan_flutter

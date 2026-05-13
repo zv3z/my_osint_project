@@ -46,7 +46,7 @@ def _wayback(target, ttype):
         r = requests.get(f"https://archive.org/wayback/available?url={target}", timeout=12)
         d = r.json()
         snap = d.get("archived_snapshots",{}).get("closest",{})
-        cdx = requests.get(f"http://web.archive.org/cdx/search/cdx?url={target}&output=json&limit=5&fl=timestamp,original,statuscode", timeout=15)
+        cdx = requests.get(f"https://web.archive.org/cdx/search/cdx?url={target}&output=json&limit=5&fl=timestamp,original,statuscode", timeout=15)
         snapshots = cdx.json()[1:] if cdx.status_code == 200 else []
         return {
             "available": snap.get("available", False),

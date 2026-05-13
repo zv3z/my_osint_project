@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../main.dart';
@@ -41,6 +42,117 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  Color _scoreColor(double score) {
+    if (score >= 70) return TitanTheme.red;
+    if (score >= 50) return TitanTheme.amber;
+    if (score >= 30) return TitanTheme.orange;
+    return TitanTheme.green;
+  }
+
+  Widget _buildTrendChart() {
+    if (_history.length < 2) return const SizedBox.shrink();
+
+    // Reverse to get chronological order (oldest first)
+    final chronological = _history.reversed.toList();
+
+    final spots = List.generate(chronological.length, (i) {
+      final score = ((chronological[i] as Map)['score'] ?? 0).toDouble();
+      return FlSpot(i.toDouble(), score);
+    });
+
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(12, 14, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('SCORE TREND',
+              style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11, fontWeight: FontWeight.w600,
+                  color: TitanTheme.textMuted, letterSpacing: 0.12)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 120,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: 100,
+                clipData: const FlClipData.all(),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: TitanTheme.borderColor,
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: 25,
+                      getTitlesWidget: (value, meta) {
+                        if (value == 0 || value == 25 || value == 50 ||
+                            value == 75 || value == 100) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(
+                                fontSize: 9, color: TitanTheme.textMuted),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: TitanTheme.indigo,
+                    barWidth: 2,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, _, __, ___) =>
+                          FlDotCirclePainter(
+                            radius: 3,
+                            color: _scoreColor(spot.y),
+                            strokeWidth: 0,
+                            strokeColor: Colors.transparent,
+                          ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          TitanTheme.indigo.withAlpha(51),
+                          TitanTheme.indigo.withAlpha(0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +177,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     sliver: SliverToBoxAdapter(
                       child: Column(
                         children: [
+                          _buildTrendChart(),
+                          const SizedBox(height: 16),
                           GridView.count(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
