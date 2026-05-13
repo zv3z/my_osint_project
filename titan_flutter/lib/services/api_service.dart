@@ -3,13 +3,19 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   static String baseUrl = 'http://localhost:8000';
+  static String apiKey = '';
+
+  static Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    if (apiKey.isNotEmpty) 'X-API-Key': apiKey,
+  };
 
   static Future<Map<String, dynamic>> scan(String target,
       {bool useCache = true, String lang = 'ar'}) async {
     final res = await http
         .post(
           Uri.parse('$baseUrl/scan'),
-          headers: {'Content-Type': 'application/json'},
+          headers: _headers,
           body: jsonEncode({'target': target, 'use_cache': useCache, 'lang': lang}),
         )
         .timeout(const Duration(seconds: 120));
@@ -21,7 +27,7 @@ class ApiService {
     final res = await http
         .post(
           Uri.parse('$baseUrl/analyze'),
-          headers: {'Content-Type': 'application/json'},
+          headers: _headers,
           body: jsonEncode({'target': target, 'lang': lang}),
         )
         .timeout(const Duration(seconds: 60));
@@ -36,7 +42,7 @@ class ApiService {
     final res = await http
         .post(
           Uri.parse('$baseUrl/chat'),
-          headers: {'Content-Type': 'application/json'},
+          headers: _headers,
           body: jsonEncode({
             'message': message,
             'target': target,
@@ -53,7 +59,7 @@ class ApiService {
 
   static Future<List<dynamic>> getHistory({int limit = 50}) async {
     final res = await http
-        .get(Uri.parse('$baseUrl/history?limit=$limit'))
+        .get(Uri.parse('$baseUrl/history?limit=$limit'), headers: _headers)
         .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) throw Exception('History failed');
     return jsonDecode(utf8.decode(res.bodyBytes)) as List;
@@ -61,7 +67,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getStats() async {
     final res = await http
-        .get(Uri.parse('$baseUrl/stats'))
+        .get(Uri.parse('$baseUrl/stats'), headers: _headers)
         .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) throw Exception('Stats failed');
     return jsonDecode(utf8.decode(res.bodyBytes));
@@ -77,7 +83,7 @@ class ApiService {
 
   static Future<List<dynamic>> getNotes(String target) async {
     final res = await http
-        .get(Uri.parse('$baseUrl/notes/${Uri.encodeComponent(target)}'))
+        .get(Uri.parse('$baseUrl/notes/${Uri.encodeComponent(target)}'), headers: _headers)
         .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) return [];
     return jsonDecode(utf8.decode(res.bodyBytes)) as List;
@@ -93,9 +99,28 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getConfig() async {
     final res = await http
-        .get(Uri.parse('$baseUrl/config'))
+        .get(Uri.parse('$baseUrl/config'), headers: _headers)
         .timeout(const Duration(seconds: 5));
     if (res.statusCode != 200) throw Exception('Config failed');
     return jsonDecode(utf8.decode(res.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getTimeline(String target) async {
+    final res = await http
+        .get(
+          Uri.parse('$baseUrl/timeline/${Uri.encodeComponent(target)}'),
+          headers: _headers,
+        )
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return [];
+    return jsonDecode(utf8.decode(res.bodyBytes)) as List;
+  }
+
+  static Future<List<dynamic>> getWatched() async {
+    final res = await http
+        .get(Uri.parse('$baseUrl/watched'), headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return [];
+    return jsonDecode(utf8.decode(res.bodyBytes)) as List;
   }
 }

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../main.dart';
+import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _urlCtrl;
+  late TextEditingController _keyCtrl;
 
   @override
   void initState() {
@@ -22,11 +24,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _urlCtrl = TextEditingController(
       text: context.read<AppState>().apiBase,
     );
+    _keyCtrl = TextEditingController(text: ApiService.apiKey);
   }
 
   @override
   void dispose() {
     _urlCtrl.dispose();
+    _keyCtrl.dispose();
     super.dispose();
   }
 
@@ -125,6 +129,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     HapticFeedback.lightImpact();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('✅ API URL saved!')));
+                  },
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('Save'),
+                  style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 46)),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // API Key
+          _SectionHeader(title: 'API KEY'),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('API Key (optional)',
+                    style: TextStyle(
+                        fontSize: 13, color: TitanTheme.textSecondary,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 4),
+                const Text(
+                    'Set TITAN_API_KEY on the server to enable',
+                    style: TextStyle(fontSize: 11, color: TitanTheme.textMuted)),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _keyCtrl,
+                  style: const TextStyle(
+                      fontFamily: 'monospace', fontSize: 13,
+                      color: TitanTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    hintText: 'your-api-key',
+                    prefixIcon: Icon(Icons.key_outlined, size: 18),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ApiService.apiKey = _keyCtrl.text.trim();
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✅ API Key saved!')));
                   },
                   icon: const Icon(Icons.save_outlined, size: 18),
                   label: const Text('Save'),

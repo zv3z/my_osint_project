@@ -127,6 +127,38 @@ def delete_bookmark(bm_id: int) -> None:
         c.execute("DELETE FROM bookmarks WHERE id=?", (bm_id,))
 
 
+def get_target_history(target: str, limit: int = 30) -> list[tuple]:
+    """Return chronological score history for a specific target."""
+    with sqlite3.connect(DB_PATH) as c:
+        return c.execute(
+            "SELECT id, ts, score, level FROM scans WHERE target=? ORDER BY ts ASC LIMIT ?",
+            (target, limit),
+        ).fetchall()
+
+
+def get_watched_targets() -> list[dict]:
+    """Return bookmarked targets with their most recent scan data."""
+    with sqlite3.connect(DB_PATH) as c:
+        bookmarks = c.execute(
+            "SELECT DISTINCT target, ttype, ts FROM bookmarks ORDER BY ts DESC"
+        ).fetchall()
+        result = []
+        for bm in bookmarks:
+            latest = c.execute(
+                "SELECT ts, score, level FROM scans WHERE target=? ORDER BY ts DESC LIMIT 1",
+                (bm[0],)
+            ).fetchone()
+            result.append({
+                "target":        bm[0],
+                "ttype":         bm[1],
+                "bookmarked_at": bm[2],
+                "last_scan":     latest[0] if latest else None,
+                "score":         latest[1] if latest else 0,
+                "level":         latest[2] if latest else "UNKNOWN",
+            })
+        return result
+
+
 # ── Notes ──────────────────────────────────────────────────────────────────
 
 def add_note(target: str, body: str) -> None:

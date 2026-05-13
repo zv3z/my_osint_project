@@ -15,7 +15,8 @@ from titan.scoring    import compute_score
 from titan.ioc        import extract as extract_iocs
 from titan.ai_engine  import analyze as ai_analyze, chat as ai_chat
 from titan.db         import (save_scan, get_history, get_cached, set_cache,
-                               add_bookmark, add_note, get_notes, stats)
+                               add_bookmark, add_note, get_notes, stats,
+                               get_target_history, get_watched_targets)
 from titan.config     import CONF, AI_AVAILABLE, ACTIVE_ENGINES
 
 logger = logging.getLogger("titan_api")
@@ -40,7 +41,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
 
 @app.exception_handler(Exception)
@@ -220,3 +221,15 @@ def get_config():
         "has_gemini":     bool(CONF.get("GEMINI_KEY")),
         "has_openai":     bool(CONF.get("OPENAI_KEY")),
     }
+
+@app.get("/timeline/{target}", dependencies=[Depends(verify_key)])
+def timeline(
+    target: str = Path(..., max_length=512, description="Target to fetch score history for"),
+):
+    rows = get_target_history(target)
+    return [{"id": r[0], "ts": r[1], "score": r[2], "level": r[3]} for r in rows]
+
+
+@app.get("/watched", dependencies=[Depends(verify_key)])
+def watched():
+    return get_watched_targets()

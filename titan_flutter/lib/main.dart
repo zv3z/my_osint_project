@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/history_screen.dart';
+import 'screens/monitor_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/api_service.dart';
 
@@ -178,6 +179,7 @@ class _RootNavigationState extends State<RootNavigation> {
   final _pages = const [
     HomeScreen(),
     HistoryScreen(),
+    MonitorScreen(),
     SettingsScreen(),
   ];
 
@@ -202,6 +204,11 @@ class _RootNavigationState extends State<RootNavigation> {
               icon: Icon(Icons.history_outlined),
               activeIcon: Icon(Icons.history),
               label: 'History',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bookmark_border_outlined),
+              activeIcon: Icon(Icons.bookmark),
+              label: 'Monitor',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings_outlined),
