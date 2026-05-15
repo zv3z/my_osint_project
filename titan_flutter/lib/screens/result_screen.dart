@@ -624,7 +624,7 @@ List<(String, String)> _extractEntities(Map<String, dynamic> raw) {
   final entities = <(String, String)>[];
   final ipRe     = RegExp(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b');
   final emailRe  = RegExp(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b');
-  final urlRe    = RegExp(r'https?://[^\s\'">,]+');
+  final urlRe    = RegExp(r"""https?://[^\s'">,]+""");
   final domainRe = RegExp(r'\b([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b');
   final text     = raw.toString();
 
