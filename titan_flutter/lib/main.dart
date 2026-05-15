@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import 'l10n.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/history_screen.dart';
@@ -202,12 +203,16 @@ class TitanApp extends StatelessWidget {
   const TitanApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Titan OSINT',
-        theme: TitanTheme.theme,
-        debugShowCheckedModeBanner: false,
-        home: const RootNavigation(),
-      );
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return MaterialApp(
+      title: 'Titan OSINT',
+      theme: TitanTheme.theme,
+      debugShowCheckedModeBanner: false,
+      locale: Locale(state.lang),
+      home: const RootNavigation(),
+    );
+  }
 }
 
 // ── Nav Item Data ──────────────────────────────────────────────────────────
@@ -503,7 +508,7 @@ class _NavPillItem extends StatelessWidget {
                 color: isSelected ? Colors.white : const Color(0xFF475569),
                 letterSpacing: 0.04,
               ),
-              child: Text(item.label),
+              child: Text(L.t(item.label.toLowerCase(), context.watch<AppState>().isAr)),
             ),
           ],
         ),

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n.dart';
 import '../main.dart';
 import '../models/scan_result.dart';
 import '../services/api_service.dart';
@@ -40,36 +41,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Status cycling
   int _statusIdx = 0;
-  final _statuses = [
-    'Initializing engines...',
-    'Running 50+ threat engines...',
-    'Correlating intelligence...',
-    'Analyzing network topology...',
-    'Fetching geolocation data...',
-    'Cross-referencing databases...',
-    'Generating AI insights...',
+  List<String> _statuses(bool isAr) => [
+    L.t('initializing',     isAr),
+    L.t('running_engines',  isAr),
+    L.t('correlating',      isAr),
+    L.t('analyzing_network',isAr),
+    L.t('fetching_geo',     isAr),
+    L.t('cross_referencing',isAr),
+    L.t('generating_ai',    isAr),
   ];
 
   // Target chip definitions: (label, icon, placeholder, color)
-  final _targetTypes = [
-    ('IP Address', Icons.router_outlined,        '8.8.8.8',           TitanTheme.cyan),
-    ('Domain',     Icons.language_outlined,       'google.com',        TitanTheme.indigo),
-    ('Email',      Icons.alternate_email_outlined,'user@example.com',  TitanTheme.violet),
-    ('Hash',       Icons.fingerprint_outlined,    'a94a8fe5ccb19ba..', TitanTheme.amber),
-    ('URL',        Icons.link_outlined,           'https://...',       TitanTheme.green),
-    ('Phone',      Icons.phone_outlined,          '+1-555-0100',       TitanTheme.orange),
-    ('GitHub',     Icons.code_outlined,           '@username',         TitanTheme.indigoLight),
-    ('ASN',        Icons.hub_outlined,            'AS15169',           TitanTheme.pink),
-    ('npm',        Icons.inventory_2_outlined,    'package-name',      TitanTheme.greenDark),
+  List<(String, IconData, String, Color)> _getTargetTypes(bool isAr) => [
+    (L.t('ip_address', isAr), Icons.router_outlined,        '8.8.8.8',           TitanTheme.cyan),
+    (L.t('domain',     isAr), Icons.language_outlined,       'google.com',        TitanTheme.indigo),
+    (L.t('email',      isAr), Icons.alternate_email_outlined,'user@example.com',  TitanTheme.violet),
+    (L.t('hash',       isAr), Icons.fingerprint_outlined,    'a94a8fe5ccb19ba..', TitanTheme.amber),
+    (L.t('url',        isAr), Icons.link_outlined,           'https://...',       TitanTheme.green),
+    (L.t('phone',      isAr), Icons.phone_outlined,          '+1-555-0100',       TitanTheme.orange),
+    ('GitHub',                 Icons.code_outlined,           '@username',         TitanTheme.indigoLight),
+    (L.t('asn',        isAr), Icons.hub_outlined,            'AS15169',           TitanTheme.pink),
+    ('npm',                    Icons.inventory_2_outlined,    'package-name',      TitanTheme.greenDark),
   ];
 
-  final _features = [
-    (Icons.shield_outlined,     '50+ Engines',      'Parallel threat scanning',     TitanTheme.indigo,  TitanTheme.violet),
-    (Icons.psychology_outlined, 'AI Analysis',      'Gemini & GPT-4 fusion',        TitanTheme.cyan,    TitanTheme.indigo),
-    (Icons.map_outlined,        'Geo Intelligence', 'IP geolocation mapping',       TitanTheme.green,   TitanTheme.cyan),
-    (Icons.hub_outlined,        'Network Graph',    'Relationship visualization',   TitanTheme.amber,   TitanTheme.orange),
-    (Icons.bug_report_outlined, 'MITRE ATT&CK',     'Technique mapping',            TitanTheme.orange,  TitanTheme.red),
-    (Icons.lock_open_outlined,  'Breach Check',     'HIBP + LeakCheck integration', TitanTheme.red,     TitanTheme.pink),
+  List<(IconData, String, String, Color, Color)> _getFeatures(bool isAr) => [
+    (Icons.shield_outlined,     L.t('50_engines',   isAr), L.t('parallel_scanning', isAr), TitanTheme.indigo,  TitanTheme.violet),
+    (Icons.psychology_outlined, L.t('ai_analysis',  isAr), L.t('gemini_gpt',        isAr), TitanTheme.cyan,    TitanTheme.indigo),
+    (Icons.map_outlined,        L.t('geo_intel',    isAr), L.t('ip_geo_mapping',    isAr), TitanTheme.green,   TitanTheme.cyan),
+    (Icons.hub_outlined,        L.t('network_graph',isAr), L.t('relationship_viz',  isAr), TitanTheme.amber,   TitanTheme.orange),
+    (Icons.bug_report_outlined, 'MITRE ATT&CK',            L.t('technique_mapping', isAr), TitanTheme.orange,  TitanTheme.red),
+    (Icons.lock_open_outlined,  L.t('breach_check', isAr), L.t('hibp_leakcheck',    isAr), TitanTheme.red,     TitanTheme.pink),
   ];
 
   @override
@@ -125,10 +126,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     HapticFeedback.mediumImpact();
     _focusNode.unfocus();
 
+    final isAr = context.read<AppState>().isAr;
     setState(() {
       _scanning  = true;
       _statusIdx = 0;
-      _status    = _statuses[0];
+      _status    = _statuses(isAr)[0];
     });
 
     // Cycle status messages while scanning
@@ -178,9 +180,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!_scanning || !mounted) return;
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted || !_scanning) return;
+      final isAr = context.read<AppState>().isAr;
+      final list = _statuses(isAr);
       setState(() {
-        _statusIdx = (_statusIdx + 1) % _statuses.length;
-        _status    = _statuses[_statusIdx];
+        _statusIdx = (_statusIdx + 1) % list.length;
+        _status    = list[_statusIdx];
       });
       _cycleStatus();
     });
@@ -188,42 +192,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isAr = context.watch<AppState>().isAr;
     return Scaffold(
       backgroundColor: TitanTheme.bgPrimary,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // ── Animated Header ────────────────────────────────────
-          SliverToBoxAdapter(child: _buildHeader()),
+      body: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // ── Animated Header ──────────────────────────────────
+            SliverToBoxAdapter(child: _buildHeader()),
 
-          // ── Main Content ───────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 20),
+            // ── Main Content ─────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 20),
 
-                // Scan card
-                _buildScanCard(),
-                const SizedBox(height: 28),
+                  // Scan card
+                  _buildScanCard(),
+                  const SizedBox(height: 28),
 
-                // Supported Targets
-                _buildSectionLabel('SUPPORTED TARGETS'),
-                const SizedBox(height: 12),
-                _buildTargetChips(),
-                const SizedBox(height: 28),
+                  // Supported Targets
+                  _buildSectionLabel(isAr ? 'الأهداف المدعومة' : 'SUPPORTED TARGETS'),
+                  const SizedBox(height: 12),
+                  _buildTargetChips(isAr),
+                  const SizedBox(height: 28),
 
-                // Capabilities grid
-                _buildSectionLabel('CAPABILITIES'),
-                const SizedBox(height: 12),
-                _buildFeatureGrid(),
+                  // Capabilities grid
+                  _buildSectionLabel(isAr ? 'الإمكانيات' : 'CAPABILITIES'),
+                  const SizedBox(height: 12),
+                  _buildFeatureGrid(isAr),
 
-                // Bottom padding for floating nav
-                const SizedBox(height: 110),
-              ]),
+                  // Bottom padding for floating nav
+                  const SizedBox(height: 110),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -769,16 +777,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // ── Target Chips ─────────────────────────────────────────────────────────
-  Widget _buildTargetChips() {
+  Widget _buildTargetChips(bool isAr) {
+    final types = _getTargetTypes(isAr);
     return SizedBox(
       height: 46,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: _targetTypes.length,
+        itemCount: types.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          final t = _targetTypes[i];
+          final t = types[i];
           return _TargetChip(
             label: t.$1,
             icon: t.$2,
@@ -795,7 +804,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // ── Feature Grid ─────────────────────────────────────────────────────────
-  Widget _buildFeatureGrid() {
+  Widget _buildFeatureGrid(bool isAr) {
+    final features = _getFeatures(isAr);
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -805,9 +815,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         mainAxisSpacing: 12,
         childAspectRatio: 1.6,
       ),
-      itemCount: _features.length,
+      itemCount: features.length,
       itemBuilder: (_, i) {
-        final f = _features[i];
+        final f = features[i];
         return _FeatureCard(
           icon:        f.$1,
           title:       f.$2,
