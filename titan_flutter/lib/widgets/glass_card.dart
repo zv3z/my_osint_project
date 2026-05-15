@@ -1,42 +1,293 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../main.dart';
 
+// ── Glass Card ─────────────────────────────────────────────────────────────
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final Color? borderColor;
   final double borderRadius;
   final Color? backgroundColor;
+  final Color? glowColor;
+  final double blurSigma;
+  final Gradient? borderGradient;
 
   const GlassCard({
     super.key,
     required this.child,
     this.padding,
     this.borderColor,
-    this.borderRadius = 16,
+    this.borderRadius = 20,
     this.backgroundColor,
+    this.glowColor,
+    this.blurSigma = 12,
+    this.borderGradient,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding ?? const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? TitanTheme.bgCard,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: borderColor ?? TitanTheme.borderColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(76),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+    final effectiveGlow = glowColor ?? Colors.transparent;
+    final hasGlow = glowColor != null;
+
+    // 1. Build the glass interior
+    Widget card = ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        child: Container(
+          padding: padding ?? const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                (backgroundColor ?? const Color(0x0DFFFFFF)),
+                (backgroundColor ?? const Color(0x06FFFFFF)),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
-        ],
+          child: child,
+        ),
       ),
-      child: child,
+    );
+
+    // 2. Overlay gradient border via CustomPaint
+    card = CustomPaint(
+      painter: _GradientBorderPainter(
+        borderRadius: borderRadius,
+        borderColor: borderColor,
+        borderGradient: borderGradient,
+      ),
+      child: card,
+    );
+
+    // 3. Outer glow / shadow
+    if (hasGlow) {
+      card = Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: effectiveGlow.withOpacity(0.28),
+              blurRadius: 28,
+              spreadRadius: -2,
+              offset: const Offset(0, 0),
+            ),
+            BoxShadow(
+              color: effectiveGlow.withOpacity(0.12),
+              blurRadius: 56,
+              spreadRadius: 4,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.50),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: card,
+      );
+    } else {
+      card = Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.45),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: const Color(0xFF6366F1).withOpacity(0.04),
+              blurRadius: 40,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: card,
+      );
+    }
+
+    return card;
+  }
+}
+
+// ── Gradient Border Painter ────────────────────────────────────────────────
+class _GradientBorderPainter extends CustomPainter {
+  final double borderRadius;
+  final Color? borderColor;
+  final Gradient? borderGradient;
+
+  _GradientBorderPainter({
+    required this.borderRadius,
+    this.borderColor,
+    this.borderGradient,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect  = Rect.fromLTWH(0, 0, size.width, size.height);
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    if (borderGradient != null) {
+      paint.shader = borderGradient!.createShader(rect);
+    } else {
+      paint.color = borderColor ?? const Color(0x18FFFFFF);
+    }
+
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(_GradientBorderPainter old) =>
+      old.borderRadius != borderRadius ||
+      old.borderColor != borderColor ||
+      old.borderGradient != borderGradient;
+}
+
+// ── Neon Button ────────────────────────────────────────────────────────────
+class NeonButton extends StatefulWidget {
+  final IconData? icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final List<Color> colors;
+  final bool isLoading;
+  final Widget? loadingChild;
+  final double height;
+  final double borderRadius;
+
+  const NeonButton({
+    super.key,
+    this.icon,
+    required this.label,
+    required this.onPressed,
+    this.colors = const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    this.isLoading = false,
+    this.loadingChild,
+    this.height = 54,
+    this.borderRadius = 16,
+  });
+
+  @override
+  State<NeonButton> createState() => _NeonButtonState();
+}
+
+class _NeonButtonState extends State<NeonButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scaleCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+      lowerBound: 0.96,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(_) {
+    if (widget.onPressed == null || widget.isLoading) return;
+    _scaleCtrl.reverse();
+  }
+
+  void _onTapUp(_) => _scaleCtrl.forward();
+  void _onTapCancel() => _scaleCtrl.forward();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDisabled = widget.onPressed == null || widget.isLoading;
+    final glowColor  = widget.colors.first;
+
+    return GestureDetector(
+      onTapDown:   _onTapDown,
+      onTapUp:     _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: isDisabled ? null : widget.onPressed,
+      child: AnimatedBuilder(
+        animation: _scaleCtrl,
+        builder: (context, child) =>
+            Transform.scale(scale: _scaleCtrl.value, child: child),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isDisabled ? 0.50 : 1.0,
+          child: Container(
+            height: widget.height,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: widget.colors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              boxShadow: isDisabled
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: glowColor.withOpacity(0.50),
+                        blurRadius: 22,
+                        spreadRadius: -2,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: glowColor.withOpacity(0.22),
+                        blurRadius: 44,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+            ),
+            child: widget.isLoading
+                ? Center(
+                    child: widget.loadingChild ??
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white.withOpacity(0.9),
+                            strokeWidth: 2.5,
+                          ),
+                        ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.icon != null) ...[
+                        Icon(widget.icon, size: 20, color: Colors.white),
+                        const SizedBox(width: 10),
+                      ],
+                      Text(
+                        widget.label,
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -59,31 +310,69 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
+      glowColor: valueColor,
+      borderGradient: LinearGradient(
+        colors: [
+          (valueColor ?? TitanTheme.indigo).withOpacity(0.35),
+          (valueColor ?? TitanTheme.violet).withOpacity(0.10),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null)
-            Icon(icon, size: 18, color: TitanTheme.textMuted),
-          if (icon != null) const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: valueColor ?? TitanTheme.indigoLight,
-              height: 1,
+          if (icon != null) ...[
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    (valueColor ?? TitanTheme.indigo).withOpacity(0.25),
+                    (valueColor ?? TitanTheme.violet).withOpacity(0.10),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: (valueColor ?? TitanTheme.indigo).withOpacity(0.25),
+                ),
+              ),
+              child: Icon(icon, size: 18,
+                  color: valueColor ?? TitanTheme.indigoLight),
+            ),
+            const SizedBox(height: 12),
+          ],
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [
+                valueColor ?? TitanTheme.indigoLight,
+                (valueColor ?? TitanTheme.violet).withOpacity(0.75),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(bounds),
+            child: Text(
+              value,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                height: 1,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 10,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: TitanTheme.textMuted,
-              letterSpacing: 0.08,
+              letterSpacing: 0.12,
             ),
           ),
         ],
@@ -111,61 +400,80 @@ class SignalRow extends StatelessWidget {
     'MEDIUM':   Color(0xFFF59E0B),
     'LOW':      Color(0xFF10B981),
   };
-  static const _icons = {
-    'CRITICAL': '🔴',
-    'HIGH':     '🟠',
-    'MEDIUM':   '🟡',
-    'LOW':      '🟢',
-  };
 
   @override
   Widget build(BuildContext context) {
     final col = _colors[level] ?? const Color(0xFF888888);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: col.withAlpha(18),
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: col, width: 3)),
-      ),
-      child: Row(
-        children: [
-          Text(_icons[level] ?? '⚪', style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 70,
-            child: Text(
-              level,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: col,
-                letterSpacing: 0.04,
-              ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: col.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border(
+              left:   BorderSide(color: col, width: 3),
+              top:    BorderSide(color: col.withOpacity(0.18), width: 0.5),
+              right:  BorderSide(color: col.withOpacity(0.08), width: 0.5),
+              bottom: BorderSide(color: col.withOpacity(0.08), width: 0.5),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  engine,
-                  style: const TextStyle(
+          child: Row(
+            children: [
+              // Glowing dot
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: col,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: col.withOpacity(0.7), blurRadius: 8),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 72,
+                child: Text(
+                  level,
+                  style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
-                    color: TitanTheme.textMuted,
-                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w700,
+                    color: col,
+                    letterSpacing: 0.04,
                   ),
                 ),
-                Text(
-                  message,
-                  style: const TextStyle(fontSize: 13, color: TitanTheme.textPrimary),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      engine,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 10,
+                        color: TitanTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      message,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: TitanTheme.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -187,36 +495,55 @@ class ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      backgroundColor: color.withAlpha(20),
-      borderColor: color.withAlpha(89),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      backgroundColor: color.withOpacity(0.07),
+      borderGradient: LinearGradient(
+        colors: [
+          color.withOpacity(0.45),
+          color.withOpacity(0.15),
+          color.withOpacity(0.05),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      glowColor: color,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       child: Column(
         children: [
-          Text(
-            '$score',
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 52,
-              fontWeight: FontWeight.w800,
-              color: color,
-              height: 1,
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [color, color.withOpacity(0.65)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ).createShader(bounds),
+            child: Text(
+              '$score',
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 60,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                height: 1,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
+            style: GoogleFonts.spaceGrotesk(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: color,
-              letterSpacing: 0.1,
+              letterSpacing: 0.08,
             ),
           ),
           const SizedBox(height: 2),
-          const Text(
+          Text(
             'THREAT SCORE',
-            style: TextStyle(fontSize: 10, color: TitanTheme.textMuted, letterSpacing: 0.1),
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: TitanTheme.textMuted,
+              letterSpacing: 0.14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
