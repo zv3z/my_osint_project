@@ -3,6 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import json, datetime, logging, secrets
+import httpx
 from fastapi import FastAPI, HTTPException, Request, Query, Path, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -254,6 +255,66 @@ def create_share_endpoint(req: ShareRequest):
     except Exception as e:
         raise HTTPException(500, f"Share creation failed: {e}")
     return {"token": token, "url": f"/public/{token}"}
+
+@app.get("/cve/recent")
+def recent_cves(limit: int = 20, severity: str = ""):
+    """Fetch recent CVEs from NVD — no auth required for public dashboard"""
+    params = {"resultsPerPage": min(limit, 50), "startIndex": 0}
+    if severity.upper() in ("CRITICAL","HIGH","MEDIUM","LOW"):
+        params["cvssV3Severity"] = severity.upper()
+    try:
+        r = httpx.get("https://services.nvd.nist.gov/rest/json/cves/2.0",
+                      params=params, timeout=15,
+                      headers={"User-Agent": "TitanOSINT/3.2"})
+        data = r.json()
+        cves = []
+        for item in data.get("vulnerabilities", []):
+            cve = item.get("cve", {})
+            metrics = cve.get("metrics", {})
+            cvss = (metrics.get("cvssMetricV31") or metrics.get("cvssMetricV30") or
+                    metrics.get("cvssMetricV2") or [{}])
+            score = cvss[0].get("cvssData", {}).get("baseScore", 0) if cvss else 0
+            severity_val = cvss[0].get("cvssData", {}).get("baseSeverity", "N/A") if cvss else "N/A"
+            descs = cve.get("descriptions", [])
+            desc = next((d["value"] for d in descs if d["lang"] == "en"), "N/A")
+            cves.append({
+                "id": cve.get("id"),
+                "published": cve.get("published", "")[:10],
+                "score": score,
+                "severity": severity_val,
+                "description": desc[:200],
+                "references": len(cve.get("references", [])),
+            })
+        return {"total": data.get("totalResults", 0), "cves": cves}
+    except Exception as e:
+        return {"error": str(e), "cves": []}
+
+@app.get("/dashboard/stats")
+def dashboard_stats():
+    """Aggregate stats for dashboard — no auth"""
+    db_stats = stats()
+    return {
+        "scans_total": db_stats.get("total_scans", 0),
+        "targets_unique": db_stats.get("unique_targets", 0),
+        "high_risk": db_stats.get("high_risk", 0),
+        "engines_active": ACTIVE_ENGINES,
+        "engines_total": 56,
+        "ai_available": AI_AVAILABLE,
+    }
+
+@app.get("/dashboard/noise")
+def global_noise():
+    """GreyNoise top attacking countries — uses key if available"""
+    key = CONF.get("GREYNOISE_KEY", "")
+    if not key:
+        return {"status": "no_key", "message": "Add GREYNOISE_KEY for live data"}
+    try:
+        r = httpx.get("https://api.greynoise.io/v2/experimental/gnql/stats",
+                      params={"query": "classification:malicious", "count": 10},
+                      headers={"key": key}, timeout=12)
+        return r.json()
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/public/{token}")
 def get_public_share(token: str = Path(..., max_length=32)):
