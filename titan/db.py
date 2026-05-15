@@ -47,9 +47,17 @@ def init():
             body        TEXT,
             ts          DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS shares (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            target      TEXT NOT NULL,
+            token       TEXT NOT NULL UNIQUE,
+            data_json   TEXT,
+            ts          DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE INDEX IF NOT EXISTS idx_scans_ts     ON scans(ts);
         CREATE INDEX IF NOT EXISTS idx_scans_target ON scans(target);
         CREATE INDEX IF NOT EXISTS idx_notes_target ON notes(target);
+        CREATE INDEX IF NOT EXISTS idx_shares_token ON shares(token);
         """)
 
 
@@ -176,6 +184,26 @@ def get_notes(target: str) -> list[tuple]:
             "SELECT id, target, body, ts FROM notes WHERE target=? ORDER BY ts DESC",
             (target,),
         ).fetchall()
+
+
+# ── Shares ─────────────────────────────────────────────────────────────────
+
+def create_share(target: str, token: str, data_json: str) -> None:
+    """Insert a new shareable report into the shares table."""
+    with sqlite3.connect(DB_PATH) as c:
+        c.execute(
+            "INSERT INTO shares (target, token, data_json) VALUES (?,?,?)",
+            (target, token, data_json),
+        )
+
+
+def get_share(token: str) -> tuple | None:
+    """Return (id, target, token, data_json, ts) for the given token, or None."""
+    with sqlite3.connect(DB_PATH) as c:
+        return c.execute(
+            "SELECT id, target, token, data_json, ts FROM shares WHERE token=?",
+            (token,),
+        ).fetchone()
 
 
 # ── Stats ──────────────────────────────────────────────────────────────────

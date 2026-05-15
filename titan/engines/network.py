@@ -221,17 +221,48 @@ def _rdap(target, ttype):
     except Exception as e:
         return {"error": str(e)}
 
+def _shodan_internetdb(target, ttype):
+    try:
+        if ttype != "IP":
+            return {"status": "unsupported"}
+        r = requests.get(f"https://internetdb.shodan.io/{target}", timeout=10)
+        if r.status_code == 404:
+            return {"ports": [], "known": False}
+        d = r.json()
+        return {"ports": d.get("ports", []), "cpes": d.get("cpes", []),
+                "hostnames": d.get("hostnames", []), "tags": d.get("tags", []),
+                "vulns": d.get("vulns", []),
+                "port_count": len(d.get("ports", []))}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _ipapi(target, ttype):
+    try:
+        if ttype != "IP":
+            return {"status": "unsupported"}
+        r = requests.get(f"https://ipapi.co/{target}/json/",
+                         headers={"User-Agent": "TitanOSINT/3.0"}, timeout=10)
+        d = r.json()
+        return {"city": d.get("city", "N/A"), "region": d.get("region", "N/A"),
+                "country_name": d.get("country_name", "N/A"), "org": d.get("org", "N/A"),
+                "timezone": d.get("timezone", "N/A"), "latitude": d.get("latitude", 0),
+                "longitude": d.get("longitude", 0), "asn": d.get("asn", "N/A")}
+    except Exception as e:
+        return {"error": str(e)}
+
 NETWORK_ENGINES = {
-    "Shodan":         _shodan,
-    "Censys":         _censys,
-    "ZoomEye":        _zoomeye,
-    "CriminalIP":     _criminalip,
-    "GreyNoise":      _greynoise,
-    "BGPView":        _bgpview,
-    "IPInfo":         _ipinfo,
-    "Robtex":         _robtex,
-    "SecurityTrails": _sectrails,
-    "HackerTarget":   _hackertarget,
-    "DNS Records":    _doh_dns,
-    "RDAP":           _rdap,
+    "Shodan":             _shodan,
+    "Censys":             _censys,
+    "ZoomEye":            _zoomeye,
+    "CriminalIP":         _criminalip,
+    "GreyNoise":          _greynoise,
+    "BGPView":            _bgpview,
+    "IPInfo":             _ipinfo,
+    "Robtex":             _robtex,
+    "SecurityTrails":     _sectrails,
+    "HackerTarget":       _hackertarget,
+    "DNS Records":        _doh_dns,
+    "RDAP":               _rdap,
+    "Shodan InternetDB":  _shodan_internetdb,
+    "IPapi":              _ipapi,
 }

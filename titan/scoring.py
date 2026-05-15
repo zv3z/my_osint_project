@@ -22,6 +22,9 @@ WEIGHTS = {
     "StopForumSpam":     {"appears": 12},
     "SpamHaus":          {"zone_count": 15},
     "Dehashed":          {"total": 0.2},
+    # New engines
+    "Ahmia (Dark Web)":  {"found": 25},
+    "Shodan InternetDB": {"vulns": 15},
 }
 
 RISK_LABELS = {
@@ -50,6 +53,13 @@ def compute_score(results: dict) -> dict:
                 pts += min(val * weight, weight * 50)
             elif isinstance(val, str) and val not in ("N/A", "", "none"):
                 pts += weight
+
+        # Special list-based scoring rules
+        if engine == "Shodan InternetDB":
+            vulns = data.get("vulns", [])
+            if isinstance(vulns, list):
+                pts += min(len(vulns), 3) * 15  # 15 pts per vuln, capped at 3
+
         if pts > 0:
             contributions[engine] = round(pts, 1)
         score += pts
