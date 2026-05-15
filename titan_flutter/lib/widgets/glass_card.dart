@@ -33,6 +33,7 @@ class GlassCard extends StatelessWidget {
     final effectiveGlow = glowColor ?? Colors.transparent;
     final hasGlow = glowColor != null;
 
+    // 1. Build the glass interior
     Widget card = ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
@@ -40,7 +41,14 @@ class GlassCard extends StatelessWidget {
         child: Container(
           padding: padding ?? const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: backgroundColor ?? const Color(0x0AFFFFFF),
+            gradient: LinearGradient(
+              colors: [
+                (backgroundColor ?? const Color(0x0DFFFFFF)),
+                (backgroundColor ?? const Color(0x06FFFFFF)),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           child: child,
@@ -48,35 +56,38 @@ class GlassCard extends StatelessWidget {
       ),
     );
 
-    // Gradient border using CustomPaint overlay
-    card = _GradientBorderWrapper(
-      borderRadius: borderRadius,
-      borderColor: borderColor,
-      borderGradient: borderGradient,
+    // 2. Overlay gradient border via CustomPaint
+    card = CustomPaint(
+      painter: _GradientBorderPainter(
+        borderRadius: borderRadius,
+        borderColor: borderColor,
+        borderGradient: borderGradient,
+      ),
       child: card,
     );
 
+    // 3. Outer glow / shadow
     if (hasGlow) {
       card = Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: [
             BoxShadow(
-              color: effectiveGlow.withOpacity(0.25),
-              blurRadius: 24,
-              spreadRadius: 0,
+              color: effectiveGlow.withOpacity(0.28),
+              blurRadius: 28,
+              spreadRadius: -2,
               offset: const Offset(0, 0),
             ),
             BoxShadow(
-              color: effectiveGlow.withOpacity(0.10),
-              blurRadius: 48,
+              color: effectiveGlow.withOpacity(0.12),
+              blurRadius: 56,
               spreadRadius: 4,
               offset: const Offset(0, 8),
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.45),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.50),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -88,9 +99,14 @@ class GlassCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.45),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: const Color(0xFF6366F1).withOpacity(0.04),
+              blurRadius: 40,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -102,33 +118,7 @@ class GlassCard extends StatelessWidget {
   }
 }
 
-// ── Gradient Border Wrapper ────────────────────────────────────────────────
-class _GradientBorderWrapper extends StatelessWidget {
-  final Widget child;
-  final double borderRadius;
-  final Color? borderColor;
-  final Gradient? borderGradient;
-
-  const _GradientBorderWrapper({
-    required this.child,
-    required this.borderRadius,
-    this.borderColor,
-    this.borderGradient,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _GradientBorderPainter(
-        borderRadius: borderRadius,
-        borderColor: borderColor,
-        borderGradient: borderGradient,
-      ),
-      child: child,
-    );
-  }
-}
-
+// ── Gradient Border Painter ────────────────────────────────────────────────
 class _GradientBorderPainter extends CustomPainter {
   final double borderRadius;
   final Color? borderColor;
@@ -142,21 +132,17 @@ class _GradientBorderPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      Radius.circular(borderRadius),
-    );
+    final rect  = Rect.fromLTWH(0, 0, size.width, size.height);
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
     if (borderGradient != null) {
-      paint.shader = borderGradient!.createShader(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-      );
+      paint.shader = borderGradient!.createShader(rect);
     } else {
-      paint.color = borderColor ?? const Color(0x12FFFFFF);
+      paint.color = borderColor ?? const Color(0x18FFFFFF);
     }
 
     canvas.drawRRect(rrect, paint);
@@ -177,6 +163,8 @@ class NeonButton extends StatefulWidget {
   final List<Color> colors;
   final bool isLoading;
   final Widget? loadingChild;
+  final double height;
+  final double borderRadius;
 
   const NeonButton({
     super.key,
@@ -186,6 +174,8 @@ class NeonButton extends StatefulWidget {
     this.colors = const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
     this.isLoading = false,
     this.loadingChild,
+    this.height = 54,
+    this.borderRadius = 16,
   });
 
   @override
@@ -195,19 +185,17 @@ class NeonButton extends StatefulWidget {
 class _NeonButtonState extends State<NeonButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _scaleCtrl;
-  late Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _scaleCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
-      lowerBound: 0.97,
+      duration: const Duration(milliseconds: 110),
+      lowerBound: 0.96,
       upperBound: 1.0,
       value: 1.0,
     );
-    _scale = _scaleCtrl;
   }
 
   @override
@@ -217,71 +205,64 @@ class _NeonButtonState extends State<NeonButton>
   }
 
   void _onTapDown(_) {
-    if (widget.onPressed == null) return;
+    if (widget.onPressed == null || widget.isLoading) return;
     _scaleCtrl.reverse();
   }
 
-  void _onTapUp(_) {
-    _scaleCtrl.forward();
-  }
-
-  void _onTapCancel() {
-    _scaleCtrl.forward();
-  }
+  void _onTapUp(_) => _scaleCtrl.forward();
+  void _onTapCancel() => _scaleCtrl.forward();
 
   @override
   Widget build(BuildContext context) {
     final isDisabled = widget.onPressed == null || widget.isLoading;
-    final glowColor = widget.colors.first;
+    final glowColor  = widget.colors.first;
 
     return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
+      onTapDown:   _onTapDown,
+      onTapUp:     _onTapUp,
       onTapCancel: _onTapCancel,
       onTap: isDisabled ? null : widget.onPressed,
       child: AnimatedBuilder(
-        animation: _scale,
-        builder: (context, child) => Transform.scale(
-          scale: _scale.value,
-          child: child,
-        ),
+        animation: _scaleCtrl,
+        builder: (context, child) =>
+            Transform.scale(scale: _scaleCtrl.value, child: child),
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 200),
-          opacity: isDisabled ? 0.55 : 1.0,
+          opacity: isDisabled ? 0.50 : 1.0,
           child: Container(
-            height: 52,
+            height: widget.height,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: widget.colors,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
               boxShadow: isDisabled
                   ? []
                   : [
                       BoxShadow(
-                        color: glowColor.withOpacity(0.45),
-                        blurRadius: 20,
-                        spreadRadius: 0,
+                        color: glowColor.withOpacity(0.50),
+                        blurRadius: 22,
+                        spreadRadius: -2,
                         offset: const Offset(0, 4),
                       ),
                       BoxShadow(
-                        color: glowColor.withOpacity(0.20),
-                        blurRadius: 40,
+                        color: glowColor.withOpacity(0.22),
+                        blurRadius: 44,
                         spreadRadius: 0,
-                        offset: const Offset(0, 8),
+                        offset: const Offset(0, 10),
                       ),
                     ],
             ),
             child: widget.isLoading
                 ? Center(
                     child: widget.loadingChild ??
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
+                        SizedBox(
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: Colors.white.withOpacity(0.9),
                             strokeWidth: 2.5,
                           ),
                         ),
@@ -299,7 +280,7 @@ class _NeonButtonState extends State<NeonButton>
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
-                          letterSpacing: 0.08,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ],
@@ -329,48 +310,69 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       glowColor: valueColor,
+      borderGradient: LinearGradient(
+        colors: [
+          (valueColor ?? TitanTheme.indigo).withOpacity(0.35),
+          (valueColor ?? TitanTheme.violet).withOpacity(0.10),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null)
+          if (icon != null) ...[
             Container(
-              width: 32,
-              height: 32,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: (valueColor ?? TitanTheme.indigo).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
+                gradient: LinearGradient(
+                  colors: [
+                    (valueColor ?? TitanTheme.indigo).withOpacity(0.25),
+                    (valueColor ?? TitanTheme.violet).withOpacity(0.10),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: (valueColor ?? TitanTheme.indigo).withOpacity(0.25),
+                ),
               ),
-              child: Icon(icon, size: 16,
+              child: Icon(icon, size: 18,
                   color: valueColor ?? TitanTheme.indigoLight),
             ),
-          if (icon != null) const SizedBox(height: 10),
+            const SizedBox(height: 12),
+          ],
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
                 valueColor ?? TitanTheme.indigoLight,
-                (valueColor ?? TitanTheme.violet).withOpacity(0.8),
+                (valueColor ?? TitanTheme.violet).withOpacity(0.75),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ).createShader(bounds),
             child: Text(
               value,
               style: GoogleFonts.spaceGrotesk(
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
                 height: 1,
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           Text(
             label.toUpperCase(),
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: TitanTheme.textMuted,
-              letterSpacing: 0.1,
+              letterSpacing: 0.12,
             ),
           ),
         ],
@@ -394,65 +396,55 @@ class SignalRow extends StatelessWidget {
 
   static const _colors = {
     'CRITICAL': Color(0xFFEF4444),
-    'HIGH': Color(0xFFF97316),
-    'MEDIUM': Color(0xFFF59E0B),
-    'LOW': Color(0xFF10B981),
-  };
-
-  static const _dotColors = {
-    'CRITICAL': Color(0xFFEF4444),
-    'HIGH': Color(0xFFF97316),
-    'MEDIUM': Color(0xFFF59E0B),
-    'LOW': Color(0xFF10B981),
+    'HIGH':     Color(0xFFF97316),
+    'MEDIUM':   Color(0xFFF59E0B),
+    'LOW':      Color(0xFF10B981),
   };
 
   @override
   Widget build(BuildContext context) {
     final col = _colors[level] ?? const Color(0xFF888888);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: col.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border(
-              left: BorderSide(color: col, width: 3),
-              top: BorderSide(color: col.withOpacity(0.15), width: 0.5),
-              right: BorderSide(color: col.withOpacity(0.08), width: 0.5),
+              left:   BorderSide(color: col, width: 3),
+              top:    BorderSide(color: col.withOpacity(0.18), width: 0.5),
+              right:  BorderSide(color: col.withOpacity(0.08), width: 0.5),
               bottom: BorderSide(color: col.withOpacity(0.08), width: 0.5),
             ),
           ),
           child: Row(
             children: [
+              // Glowing dot
               Container(
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: _dotColors[level] ?? const Color(0xFF888888),
+                  color: col,
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(
-                      color: col.withOpacity(0.6),
-                      blurRadius: 6,
-                    ),
+                    BoxShadow(color: col.withOpacity(0.7), blurRadius: 8),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
               SizedBox(
-                width: 70,
+                width: 72,
                 child: Text(
                   level,
-                  style: TextStyle(
+                  style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: col,
-                    letterSpacing: 0.06,
-                    fontFamily: 'monospace',
+                    letterSpacing: 0.04,
                   ),
                 ),
               ),
@@ -468,6 +460,7 @@ class SignalRow extends StatelessWidget {
                         color: TitanTheme.textMuted,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     Text(
                       message,
                       style: GoogleFonts.inter(
@@ -503,35 +496,43 @@ class ScoreBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       backgroundColor: color.withOpacity(0.07),
-      borderColor: color.withOpacity(0.35),
+      borderGradient: LinearGradient(
+        colors: [
+          color.withOpacity(0.45),
+          color.withOpacity(0.15),
+          color.withOpacity(0.05),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       glowColor: color,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       child: Column(
         children: [
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
-              colors: [color, color.withOpacity(0.7)],
+              colors: [color, color.withOpacity(0.65)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ).createShader(bounds),
             child: Text(
               '$score',
               style: GoogleFonts.spaceGrotesk(
-                fontSize: 56,
+                fontSize: 60,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
                 height: 1,
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             label,
             style: GoogleFonts.spaceGrotesk(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: color,
-              letterSpacing: 0.1,
+              letterSpacing: 0.08,
             ),
           ),
           const SizedBox(height: 2),
@@ -540,7 +541,7 @@ class ScoreBadge extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 10,
               color: TitanTheme.textMuted,
-              letterSpacing: 0.12,
+              letterSpacing: 0.14,
               fontWeight: FontWeight.w500,
             ),
           ),
