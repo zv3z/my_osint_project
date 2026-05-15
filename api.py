@@ -2,7 +2,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
-import json, datetime, logging
+import json, datetime, logging, secrets
 from fastapi import FastAPI, HTTPException, Request, Query, Path, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,7 +16,8 @@ from titan.ioc        import extract as extract_iocs
 from titan.ai_engine  import analyze as ai_analyze, chat as ai_chat
 from titan.db         import (save_scan, get_history, get_cached, set_cache,
                                add_bookmark, add_note, get_notes, stats,
-                               get_target_history, get_watched_targets)
+                               get_target_history, get_watched_targets,
+                               create_share, get_share)
 from titan.config     import CONF, AI_AVAILABLE, ACTIVE_ENGINES
 
 logger = logging.getLogger("titan_api")
@@ -103,6 +104,9 @@ class NoteRequest(BaseModel):
 class BookmarkRequest(BaseModel):
     target: str
     ttype: str
+
+class ShareRequest(BaseModel):
+    target: str
 
 # ── Routes ────────────────────────────────────────────────────────
 
@@ -233,3 +237,31 @@ def timeline(
 @app.get("/watched", dependencies=[Depends(verify_key)])
 def watched():
     return get_watched_targets()
+
+@app.post("/share", dependencies=[Depends(verify_key)])
+def create_share_endpoint(req: ShareRequest):
+    """Create a public shareable link for a scan result"""
+    cached = get_cached(req.target)
+    if not cached:
+        raise HTTPException(404, "No scan found for this target — run a scan first")
+    token = secrets.token_urlsafe(16)
+    try:
+        results = json.loads(cached[2])
+        score = compute_score(results)
+        payload = json.dumps({"target": req.target, "ttype": classify(req.target),
+                              "results": results, "score": score})
+        create_share(req.target, token, payload)
+    except Exception as e:
+        raise HTTPException(500, f"Share creation failed: {e}")
+    return {"token": token, "url": f"/public/{token}"}
+
+@app.get("/public/{token}")
+def get_public_share(token: str = Path(..., max_length=32)):
+    """Public endpoint — no auth required — for shared scan reports"""
+    row = get_share(token)
+    if not row:
+        raise HTTPException(404, "Share not found or expired")
+    try:
+        return json.loads(row[3])
+    except Exception:
+        raise HTTPException(500, "Corrupted share data")
