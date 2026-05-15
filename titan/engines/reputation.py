@@ -45,10 +45,30 @@ def _urlscan(target, ttype):
     try:
         key = CONF["URLSCAN_KEY"]
         if not key: return {"status": "no_key"}
-        r = requests.post("https://urlscan.io/api/v1/scan/",
-                          json={"url": target, "visibility": "private"},
-                          headers={"API-Key": key}, timeout=12)
-        return r.json()
+        if ttype not in ("URL", "DOMAIN", "IP"):
+            return {"status": "unsupported"}
+        # Search existing results first (instant); submit new scan only for URLs
+        query = f"domain:{target}" if ttype == "DOMAIN" else f"ip:{target}" if ttype == "IP" else f"page.url:{target}"
+        r = requests.get("https://urlscan.io/api/v1/search/",
+                         params={"q": query, "size": 5},
+                         headers={"API-Key": key}, timeout=12)
+        d = r.json()
+        results = d.get("results", [])
+        if results:
+            latest = results[0].get("page", {})
+            return {"total": d.get("total", 0),
+                    "country": latest.get("country", "N/A"),
+                    "server": latest.get("server", "N/A"),
+                    "ip": latest.get("ip", "N/A"),
+                    "screenshot": results[0].get("screenshot", ""),
+                    "verdict": results[0].get("verdicts", {}).get("overall", {}).get("score", 0)}
+        # If no existing results, submit a scan for URLs
+        if ttype == "URL":
+            rs = requests.post("https://urlscan.io/api/v1/scan/",
+                               json={"url": target, "visibility": "private"},
+                               headers={"API-Key": key}, timeout=12)
+            return {"submitted": True, "uuid": rs.json().get("uuid", "N/A")}
+        return {"total": 0, "message": "No existing scans found"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -73,12 +93,21 @@ def _publicwww(target, ttype):
 def _wigle(target, ttype):
     try:
         key = CONF["WIGLE_KEY"]
+        name = CONF.get("WIGLE_NAME", "")
         if not key: return {"status": "no_key"}
-        from requests.auth import HTTPBasicAuth
-        r = requests.get(f"https://api.wigle.net/api/v2/network/search?netid={target}",
-                         auth=HTTPBasicAuth(key,""), timeout=12)
+        import base64
+        # Wigle uses Basic Auth with API Name + API Token, or just token as bearer
+        if name:
+            creds = base64.b64encode(f"{name}:{key}".encode()).decode()
+            headers = {"Authorization": f"Basic {creds}"}
+        else:
+            headers = {"Authorization": f"Basic {key}"}
+        r = requests.get("https://api.wigle.net/api/v2/network/search",
+                         params={"ssid": target} if ttype == "UNKNOWN" else {"netid": target},
+                         headers=headers, timeout=12)
         d = r.json()
-        return {"totalResults": d.get("totalResults",0), "success": d.get("success",False)}
+        return {"totalResults": d.get("totalResults", 0), "success": d.get("success", False),
+                "results": len(d.get("results", []))}
     except Exception as e:
         return {"error": str(e)}
 

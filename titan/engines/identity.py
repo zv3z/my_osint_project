@@ -44,9 +44,25 @@ def _intelx(target, ttype):
     try:
         key = CONF["INTELX_KEY"]
         if not key: return {"status": "no_key"}
-        r = requests.get(f"https://2.intelx.io/intelligent/search",
-                         params={"k": key, "q": target, "limit": 5}, timeout=12)
-        return r.json()
+        # Step 1: submit search
+        rs = requests.post("https://2.intelx.io/intelligent/search",
+                           json={"term": target, "maxresults": 5, "media": 0,
+                                 "sort": 4, "terminate": []},
+                           headers={"x-key": key}, timeout=12)
+        if rs.status_code != 200:
+            return {"status": f"http_{rs.status_code}"}
+        sid = rs.json().get("id", "")
+        if not sid:
+            return {"status": "no_results"}
+        # Step 2: fetch results
+        rr = requests.get("https://2.intelx.io/intelligent/search/result",
+                          params={"id": sid, "limit": 5},
+                          headers={"x-key": key}, timeout=12)
+        d = rr.json()
+        records = d.get("records", []) or []
+        return {"total": len(records),
+                "results": [{"name": rec.get("name",""), "date": rec.get("date",""),
+                              "bucket": rec.get("bucket","")} for rec in records[:5]]}
     except Exception as e:
         return {"error": str(e)}
 

@@ -52,6 +52,7 @@ CONF: dict[str, str] = {
     "INTELX_KEY":      _e("INTELX_KEY"),
     "HUNTER_KEY":      _e("HUNTER_KEY"),
     "WIGLE_KEY":       _e("WIGLE_KEY"),
+    "WIGLE_NAME":      _e("WIGLE_NAME"),
     # DNS / WHOIS
     "WHOIS_KEY":       _e("WHOISXML_KEY", "WHOIS_KEY"),
     "PUBLICWWW_KEY":   _e("PUBLICWWW_KEY"),
