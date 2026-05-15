@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../main.dart';
 import '../models/scan_result.dart';
@@ -163,6 +164,36 @@ class _ResultScreenState extends State<ResultScreen>
     await Printing.sharePdf(bytes: await pdf.save(), filename: filename);
   }
 
+  Future<void> _shareReport() async {
+    try {
+      final data = await ApiService.share(r.target);
+      final token = data['token'] ?? data['url'] ?? data['share_url'] ?? '';
+      final shareUrl = token.toString().startsWith('http')
+          ? token.toString()
+          : '${ApiService.baseUrl}/share/$token';
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Share link: $shareUrl'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Copy',
+            onPressed: () => Clipboard.setData(ClipboardData(text: shareUrl)),
+          ),
+        ),
+      );
+      await Share.share(
+        'Titan OSINT Report for ${r.target}\n$shareUrl',
+        subject: 'Titan OSINT – ${r.target}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Share failed: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,6 +212,11 @@ class _ResultScreenState extends State<ResultScreen>
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 tooltip: 'Export PDF',
                 onPressed: _exportPdf,
+              ),
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                tooltip: 'Share Report',
+                onPressed: _shareReport,
               ),
               IconButton(
                 icon: const Icon(Icons.bookmark_outline),
@@ -429,6 +465,10 @@ class _DashboardTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
+        // Discovered entities
+        _EntitiesSection(raw: result.results),
+        const SizedBox(height: 16),
+
         // Infrastructure
         GlassCard(
           child: Column(
@@ -573,6 +613,107 @@ class _DashboardTab extends StatelessWidget {
 
         const SizedBox(height: 80),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Entities Section (used by Dashboard Tab)
+// ══════════════════════════════════════════════════════════════════
+List<(String, String)> _extractEntities(Map<String, dynamic> raw) {
+  final entities = <(String, String)>[];
+  final ipRe     = RegExp(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b');
+  final emailRe  = RegExp(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b');
+  final urlRe    = RegExp(r'https?://[^\s\'">,]+');
+  final domainRe = RegExp(r'\b([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b');
+  final text     = raw.toString();
+
+  final seen = <String>{};
+
+  for (final m in emailRe.allMatches(text).take(5)) {
+    final v = m.group(0)!;
+    if (seen.add(v)) entities.add((v, 'EMAIL'));
+  }
+  for (final m in urlRe.allMatches(text).take(5)) {
+    final v = m.group(0)!;
+    if (seen.add(v)) entities.add((v, 'URL'));
+  }
+  for (final m in ipRe.allMatches(text).take(8)) {
+    final v = m.group(0)!;
+    if (seen.add(v)) entities.add((v, 'IP'));
+  }
+  for (final m in domainRe.allMatches(text).take(6)) {
+    final v = m.group(0)!;
+    // Skip entries already captured as IP, URL, or email
+    if (seen.add(v)) entities.add((v, 'DOMAIN'));
+  }
+
+  return entities;
+}
+
+class _EntitiesSection extends StatelessWidget {
+  final Map<String, dynamic> raw;
+  const _EntitiesSection({required this.raw});
+
+  static const _typeColor = {
+    'IP':     Color(0xFF22D3EE),   // cyan
+    'DOMAIN': Color(0xFF6366F1),   // indigo
+    'EMAIL':  Color(0xFFF59E0B),   // amber
+    'URL':    Color(0xFF10B981),   // green
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final entities = _extractEntities(raw);
+    if (entities.isEmpty) return const SizedBox.shrink();
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ENTITIES FOUND',
+              style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11, fontWeight: FontWeight.w600,
+                  color: TitanTheme.textMuted, letterSpacing: 0.1)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: entities.map((e) {
+              final color = _typeColor[e.$2] ?? TitanTheme.indigoLight;
+              return Tooltip(
+                message: e.$1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(25),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withAlpha(80)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(e.$2,
+                          style: TextStyle(
+                              fontSize: 9, color: color,
+                              fontWeight: FontWeight.w700, letterSpacing: 0.05)),
+                      const SizedBox(width: 5),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 110),
+                        child: Text(e.$1,
+                            style: const TextStyle(
+                                fontSize: 11, color: TitanTheme.textPrimary,
+                                fontFamily: 'monospace'),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1006,18 +1147,28 @@ class _MapTab extends StatelessWidget {
 
     void tryAdd(Map? data, String source) {
       if (data == null) return;
-      final lat = (data['lat'] as num?)?.toDouble();
-      final lon = (data['lon'] as num?)?.toDouble();
+      // Support both lat/lon and latitude/longitude field names
+      final lat = ((data['lat'] ?? data['latitude']) as num?)?.toDouble();
+      final lon = ((data['lon'] ?? data['longitude']) as num?)?.toDouble();
       if (lat == null || lon == null || (lat == 0 && lon == 0)) return;
       final city    = data['city']    as String? ?? '';
       final country = data['country'] as String? ?? '';
-      points.add({'lat': lat, 'lon': lon,
+      final isp     = data['isp']     as String? ?? '';
+      final org     = data['org']     as String? ?? '';
+      final asn     = data['asn']     as String? ?? '';
+      points.add({
+        'lat': lat,
+        'lon': lon,
         'label': [city, country].where((s) => s.isNotEmpty).join(', '),
-        'source': source});
+        'source': source,
+        'isp': isp.isNotEmpty ? isp : org,
+        'asn': asn,
+      });
     }
 
+    tryAdd(res['IPapi']  as Map?, 'IPapi');
     tryAdd(res['IPInfo'] as Map?, 'IPInfo');
-    tryAdd(res['Shodan']  as Map?, 'Shodan');
+    tryAdd(res['Shodan'] as Map?, 'Shodan');
     return points;
   }
 
@@ -1049,7 +1200,9 @@ class _MapTab extends StatelessWidget {
       options: MapOptions(initialCenter: center, initialZoom: 4),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate:
+              'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.titan.osint',
         ),
         MarkerLayer(
@@ -1057,28 +1210,66 @@ class _MapTab extends StatelessWidget {
             final lat   = p['lat']   as double;
             final lon   = p['lon']   as double;
             final label = p['label'] as String;
+            final isp   = p['isp']   as String;
+            final asn   = p['asn']   as String;
             return Marker(
               point: LatLng(lat, lon),
-              width: 140,
-              height: 68,
+              width: 180,
+              height: 110,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: TitanTheme.indigo,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [BoxShadow(
-                          color: TitanTheme.indigo.withAlpha(102),
-                          blurRadius: 8)],
+                      color: const Color(0xFF0D1121).withAlpha(230),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: TitanTheme.indigo.withAlpha(180)),
+                      boxShadow: [
+                        BoxShadow(
+                            color: TitanTheme.indigo.withAlpha(120),
+                            blurRadius: 14,
+                            spreadRadius: 2),
+                      ],
                     ),
-                    child: Text(label.isEmpty ? '—' : label,
-                        style: const TextStyle(color: Colors.white, fontSize: 10,
-                            fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(label.isEmpty ? '—' : label,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis),
+                        if (isp.isNotEmpty)
+                          Text(isp,
+                              style: const TextStyle(
+                                  color: TitanTheme.cyan, fontSize: 9),
+                              overflow: TextOverflow.ellipsis),
+                        if (asn.isNotEmpty)
+                          Text(asn,
+                              style: const TextStyle(
+                                  color: TitanTheme.textMuted, fontSize: 9),
+                              overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
                   ),
-                  const Icon(Icons.location_pin, color: Color(0xFFEF4444), size: 30),
+                  // Glowing pin
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFEF4444),
+                      boxShadow: [
+                        BoxShadow(
+                            color: const Color(0xFFEF4444).withAlpha(180),
+                            blurRadius: 12,
+                            spreadRadius: 3),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );

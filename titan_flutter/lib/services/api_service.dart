@@ -97,6 +97,18 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> share(String target) async {
+    final r = await http
+        .post(
+          Uri.parse('$baseUrl/share'),
+          headers: _headers,
+          body: jsonEncode({'target': target}),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (r.statusCode != 200) throw Exception('Share failed: ${r.body}');
+    return jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> getConfig() async {
     final res = await http
         .get(Uri.parse('$baseUrl/config'), headers: _headers)
