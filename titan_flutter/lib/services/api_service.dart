@@ -135,4 +135,23 @@ class ApiService {
     if (res.statusCode != 200) return [];
     return jsonDecode(utf8.decode(res.bodyBytes)) as List;
   }
+
+  static Future<Map<String, dynamic>> dashboardStats() async {
+    final r = await http
+        .get(Uri.parse('$baseUrl/dashboard/stats'), headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (r.statusCode != 200) throw Exception('Dashboard stats failed: ${r.body}');
+    return jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> recentCves({String severity = ''}) async {
+    final url = severity.isEmpty
+        ? '$baseUrl/cve/recent?limit=15'
+        : '$baseUrl/cve/recent?limit=15&severity=$severity';
+    final r = await http
+        .get(Uri.parse(url), headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (r.statusCode != 200) throw Exception('CVE fetch failed: ${r.body}');
+    return jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
+  }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import 'screens/dashboard_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/monitor_screen.dart';
@@ -237,14 +238,16 @@ class _RootNavigationState extends State<RootNavigation>
   late Animation<Offset> _pageSlide;
 
   static const _navItems = [
-    _NavItem(Icons.radar_outlined,      Icons.radar,      'Scan'),
-    _NavItem(Icons.history_outlined,    Icons.history,    'History'),
-    _NavItem(Icons.visibility_outlined, Icons.visibility, 'Monitor'),
-    _NavItem(Icons.settings_outlined,   Icons.settings,   'Settings'),
+    _NavItem(Icons.radar_outlined,       Icons.radar,       'Scan'),
+    _NavItem(Icons.dashboard_outlined,   Icons.dashboard,   'Dashboard'),
+    _NavItem(Icons.history_outlined,     Icons.history,     'History'),
+    _NavItem(Icons.visibility_outlined,  Icons.visibility,  'Monitor'),
+    _NavItem(Icons.settings_outlined,    Icons.settings,    'Settings'),
   ];
 
   final _pages = const [
     HomeScreen(),
+    DashboardScreen(),
     HistoryScreen(),
     MonitorScreen(),
     SettingsScreen(),
