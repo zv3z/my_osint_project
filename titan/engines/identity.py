@@ -44,9 +44,25 @@ def _intelx(target, ttype):
     try:
         key = CONF["INTELX_KEY"]
         if not key: return {"status": "no_key"}
-        r = requests.get(f"https://2.intelx.io/intelligent/search",
-                         params={"k": key, "q": target, "limit": 5}, timeout=12)
-        return r.json()
+        # Step 1: submit search
+        rs = requests.post("https://2.intelx.io/intelligent/search",
+                           json={"term": target, "maxresults": 5, "media": 0,
+                                 "sort": 4, "terminate": []},
+                           headers={"x-key": key}, timeout=12)
+        if rs.status_code != 200:
+            return {"status": f"http_{rs.status_code}"}
+        sid = rs.json().get("id", "")
+        if not sid:
+            return {"status": "no_results"}
+        # Step 2: fetch results
+        rr = requests.get("https://2.intelx.io/intelligent/search/result",
+                          params={"id": sid, "limit": 5},
+                          headers={"x-key": key}, timeout=12)
+        d = rr.json()
+        records = d.get("records", []) or []
+        return {"total": len(records),
+                "results": [{"name": rec.get("name",""), "date": rec.get("date",""),
+                              "bucket": rec.get("bucket","")} for rec in records[:5]]}
     except Exception as e:
         return {"error": str(e)}
 
@@ -68,8 +84,11 @@ def _haveibeenpwned(target, ttype):
     try:
         if ttype != "EMAIL":
             return {"status": "email_only"}
+        key = CONF.get("HIBP_KEY", "")
+        if not key:
+            return {"status": "no_key"}
         r = requests.get(f"https://haveibeenpwned.com/api/v3/breachedaccount/{target}",
-                         headers={"hibp-api-key": "free", "User-Agent": "TitanOSINT"}, timeout=12)
+                         headers={"hibp-api-key": key, "User-Agent": "TitanOSINT"}, timeout=12)
         if r.status_code == 404:
             return {"breached": False, "count": 0}
         if r.status_code == 200:
@@ -126,9 +145,12 @@ def _dehashed(target, ttype):
         if ttype not in ("EMAIL", "DOMAIN", "IP"):
             return {"status": "unsupported"}
         field = "email" if ttype == "EMAIL" else "ip_address" if ttype == "IP" else "email"
+        email = CONF.get("DEHASHED_EMAIL", "")
+        if not email:
+            return {"status": "no_key"}
         r = requests.get("https://api.dehashed.com/search",
                          params={"query": f'{field}:"{target}"', "size": 10},
-                         auth=(target, key), timeout=12)
+                         auth=(email, key), timeout=12)
         d = r.json()
         entries = d.get("entries", []) or []
         return {"total": d.get("total", 0),

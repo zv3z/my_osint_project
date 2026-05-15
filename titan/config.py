@@ -45,11 +45,14 @@ CONF: dict[str, str] = {
     "IPQS_KEY":        _e("IPQS_KEY"),
     "URLSCAN_KEY":     _e("URLSCAN_KEY"),
     # Identity / Breach
+    "HIBP_KEY":        _e("HIBP_KEY"),
+    "DEHASHED_EMAIL":  _e("DEHASHED_EMAIL"),
     "LEAKCHECK_KEY":   _e("LEAKCHECK_KEY"),
     "BREACH_KEY":      _e("BREACHDIRECTORY_KEY", "BREACH_KEY"),
     "INTELX_KEY":      _e("INTELX_KEY"),
     "HUNTER_KEY":      _e("HUNTER_KEY"),
     "WIGLE_KEY":       _e("WIGLE_KEY"),
+    "WIGLE_NAME":      _e("WIGLE_NAME"),
     # DNS / WHOIS
     "WHOIS_KEY":       _e("WHOISXML_KEY", "WHOIS_KEY"),
     "PUBLICWWW_KEY":   _e("PUBLICWWW_KEY"),

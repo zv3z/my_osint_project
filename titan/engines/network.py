@@ -21,13 +21,29 @@ def _censys(target, ttype):
         key = CONF["CENSYS_KEY"]
         if not key:
             return {"status": "no_key"}
-        auth = (key, "")
-        r = requests.get(f"https://search.censys.io/api/v2/hosts/{target}", auth=auth, timeout=12)
-        d = r.json().get("result", {})
-        return {"services": [s.get("service_name") for s in d.get("services",[])],
-                "labels": d.get("labels",[]),
-                "asn": d.get("autonomous_system",{}).get("name","N/A"),
-                "country": d.get("location",{}).get("country","N/A")}
+        if ttype not in ("IP", "DOMAIN"):
+            return {"status": "unsupported"}
+        # Censys new-style keys (censys_*) use Bearer token; legacy uses Basic Auth id:secret
+        if ":" in key:
+            api_id, api_secret = key.split(":", 1)
+            auth_kwargs = {"auth": (api_id, api_secret)}
+        else:
+            auth_kwargs = {"headers": {"Authorization": f"Bearer {key}"}}
+        if ttype == "IP":
+            r = requests.get(f"https://search.censys.io/api/v2/hosts/{target}",
+                             timeout=12, **auth_kwargs)
+            d = r.json().get("result", {})
+            return {"services": [s.get("service_name") for s in d.get("services", [])],
+                    "labels": d.get("labels", []),
+                    "asn": d.get("autonomous_system", {}).get("name", "N/A"),
+                    "country": d.get("location", {}).get("country", "N/A")}
+        else:
+            r = requests.get(f"https://search.censys.io/api/v2/certificates/_search",
+                             params={"q": target, "per_page": 5},
+                             timeout=12, **auth_kwargs)
+            d = r.json()
+            return {"total": d.get("result", {}).get("total", 0),
+                    "hits": len(d.get("result", {}).get("hits", []))}
     except Exception as e:
         return {"error": str(e)}
 
@@ -36,7 +52,7 @@ def _zoomeye(target, ttype):
         key = CONF["ZOOMEYE_KEY"]
         if not key: return {"status": "no_key"}
         r = requests.get(f"https://api.zoomeye.org/host/search?q={target}",
-                         headers={"JWT": key}, timeout=12)
+                         headers={"Authorization": f"JWT {key}"}, timeout=12)
         d = r.json()
         return {"total": d.get("total",0), "matches": len(d.get("matches",[]))}
     except Exception as e:
