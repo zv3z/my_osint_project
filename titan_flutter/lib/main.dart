@@ -36,7 +36,7 @@ class AppState extends ChangeNotifier {
   String get lang => _lang;
   bool get isAr => _lang == 'ar';
 
-  String _apiBase = 'http://localhost:8000';
+  String _apiBase = 'https://web-production-7631ff.up.railway.app';
   String get apiBase => _apiBase;
 
   void setLang(String l) {
